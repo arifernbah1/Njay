@@ -67,7 +67,7 @@ class DataManager:
 
         for pair in ConfigManager.TIER1_PAIRS:
             try:
-                ccxt_pair = pair.replace('USDT', '/USDT')
+                ccxt_pair = ConfigManager.get_binance_symbol(pair)
                 # Add timeout to fetch_ohlcv call
                 ohlcv = self.exchange.fetch_ohlcv(ccxt_pair, ConfigManager.TIMEFRAME, limit=100, params={'recvWindow': 5000})
 

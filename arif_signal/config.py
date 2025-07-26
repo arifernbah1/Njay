@@ -17,6 +17,18 @@ class ConfigManager:
         'ADAUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT'
     ]
 
+    # Symbol mapping for Binance API (some pairs have different symbols)
+    SYMBOL_MAPPING = {
+        'BTCUSDT': 'BTC/USDT',
+        'ETHUSDT': 'ETH/USDT', 
+        'BNBUSDT': 'BNB/USDT',
+        'SOLUSDT': 'SOL/USDT',
+        'ADAUSDT': 'ADA/USDT',
+        'AVAXUSDT': 'AVAX/USDT',
+        'MATICUSDT': 'POLYGON/USDT',  # MATIC uses POLYGON symbol on Binance
+        'DOTUSDT': 'DOT/USDT'
+    }
+
     # Environment variables with defaults
     TIMEFRAME = os.getenv('TIMEFRAME', '15m')
     TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', '')
@@ -41,6 +53,11 @@ class ConfigManager:
     def get_config(cls, pair: str) -> TradingConfig:
         """Get trading config for a specific pair"""
         return cls.CONFIGS.get(pair, cls.CONFIGS['BTCUSDT'])
+
+    @classmethod
+    def get_binance_symbol(cls, pair: str) -> str:
+        """Get the correct Binance symbol for a trading pair"""
+        return cls.SYMBOL_MAPPING.get(pair, pair.replace('USDT', '/USDT'))
 
     @classmethod
     def validate_config(cls) -> bool:
@@ -69,3 +86,6 @@ class ConfigManager:
         print(f"   📝 Log Level: {cls.LOG_LEVEL}")
         print(f"   📱 Telegram: {'✅ Configured' if cls.TELEGRAM_TOKEN else '❌ Not configured'}")
         print(f"   🎯 Trading Pairs: {len(cls.TIER1_PAIRS)} pairs")
+        print("   📋 Symbol Mapping:")
+        for pair, symbol in cls.SYMBOL_MAPPING.items():
+            print(f"      {pair} → {symbol}")
