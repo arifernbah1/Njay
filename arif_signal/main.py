@@ -66,6 +66,9 @@ class TradingBot:
                 ConfigManager.TIMEFRAME
             )
 
+            # Send Telegram notification for bot start
+            self._send_start_notification()
+
             # Initialize data
             self.data_manager.initialize_data()
 
@@ -83,11 +86,86 @@ class TradingBot:
             self.logger.log_error("MAIN", f"Bot error: {e}")
             self.stop()
 
+    def _send_start_notification(self):
+        """Send Telegram notification when bot starts"""
+        try:
+            # Create start message
+            start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
+            session = TimeUtils.get_trading_session()
+            
+            message = f"""
+🤖 <b>ARIF SIGNAL BOT - STARTED</b>
+
+✅ <b>Status:</b> Bot successfully started
+🕐 <b>Start Time:</b> {start_time}
+📊 <b>Timeframe:</b> {ConfigManager.TIMEFRAME}
+🕐 <b>Session:</b> {session}
+
+💎 <b>Trading Pairs ({len(ConfigManager.TIER1_PAIRS)}):</b>
+{', '.join(ConfigManager.TIER1_PAIRS)}
+
+💰 <b>Configuration:</b>
+• Min Volume: ${ConfigManager.MIN_VOLUME_USDT:,}
+• Cooldown: {ConfigManager.SIGNAL_COOLDOWN_MINUTES} minutes
+• Max Daily Signals: 1-2 per pair
+
+🎯 <b>Strategy:</b> Conservative Development Mode
+📱 <b>Notifications:</b> Active
+🔗 <b>WebSocket:</b> Connecting...
+
+<i>Bot is now monitoring for high-quality trading signals...</i>
+            """.strip()
+
+            # Send notification
+            success = self.notification_service._send_telegram(message, "BOT_START")
+            
+            if success:
+                self.logger.main_logger.info("✅ Start notification sent to Telegram")
+            else:
+                self.logger.main_logger.warning("⚠️ Failed to send start notification to Telegram")
+                
+        except Exception as e:
+            self.logger.log_error("MAIN", f"Error sending start notification: {e}")
+
     def stop(self):
         """Stop the trading bot"""
         self.logger.main_logger.info("Stopping trading bot...")
+        
+        # Send stop notification
+        self._send_stop_notification()
+        
         self.websocket_manager.stop()
         self.logger.log_session_stats()
+
+    def _send_stop_notification(self):
+        """Send Telegram notification when bot stops"""
+        try:
+            stop_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
+            
+            message = f"""
+🛑 <b>ARIF SIGNAL BOT - STOPPED</b>
+
+❌ <b>Status:</b> Bot stopped
+🕐 <b>Stop Time:</b> {stop_time}
+
+📊 <b>Session Summary:</b>
+• Check logs for detailed statistics
+• Review signal performance
+• Restart when ready
+
+<i>Bot has been safely stopped.</i>
+            """.strip()
+
+            # Send notification
+            success = self.notification_service._send_telegram(message, "BOT_STOP")
+            
+            if success:
+                self.logger.main_logger.info("✅ Stop notification sent to Telegram")
+            else:
+                self.logger.main_logger.warning("⚠️ Failed to send stop notification to Telegram")
+                
+        except Exception as e:
+            self.logger.log_error("MAIN", f"Error sending stop notification: {e}")
 
 
 # ========== ENTRY POINT ==========
