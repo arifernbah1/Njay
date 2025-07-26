@@ -11,10 +11,11 @@ load_dotenv()
 class ConfigManager:
     """Centralized configuration management with environment variables"""
 
-    # Trading pairs - Replaced MATICUSDT with more stable pairs
+    # Trading pairs - Added 2 more stable pairs (10 total)
     TIER1_PAIRS = [
         'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT',
-        'ADAUSDT', 'AVAXUSDT', 'LINKUSDT', 'XRPUSDT'
+        'ADAUSDT', 'AVAXUSDT', 'LINKUSDT', 'XRPUSDT',
+        'UNIUSDT', 'DOGEUSDT'
     ]
 
     # Symbol mapping for Binance API (some pairs have different symbols)
@@ -26,7 +27,9 @@ class ConfigManager:
         'ADAUSDT': 'ADA/USDT',
         'AVAXUSDT': 'AVAX/USDT',
         'LINKUSDT': 'LINK/USDT',  # Chainlink - very stable
-        'XRPUSDT': 'XRP/USDT'     # Ripple - high volume and stable
+        'XRPUSDT': 'XRP/USDT',    # Ripple - high volume and stable
+        'UNIUSDT': 'UNI/USDT',    # Uniswap - DEX leader, very stable
+        'DOGEUSDT': 'DOGE/USDT'   # Dogecoin - meme coin but high volume
     }
 
     # Environment variables with defaults
@@ -37,7 +40,7 @@ class ConfigManager:
     SIGNAL_COOLDOWN_MINUTES = int(os.getenv('SIGNAL_COOLDOWN_MINUTES', '30'))
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
-    # Trading configurations for each pair - Updated for new pairs
+    # Trading configurations for each pair - Updated for all 10 pairs
     CONFIGS: Dict[str, TradingConfig] = {
         'BTCUSDT': TradingConfig(4.0, 2.0, 25, 75, 2.0, 1, 4),
         'ETHUSDT': TradingConfig(3.8, 1.8, 28, 72, 2.0, 1, 4),
@@ -46,7 +49,9 @@ class ConfigManager:
         'ADAUSDT': TradingConfig(3.2, 1.6, 30, 70, 1.5, 3, 2),
         'AVAXUSDT': TradingConfig(3.4, 1.8, 28, 72, 1.6, 2, 3),
         'LINKUSDT': TradingConfig(3.3, 1.7, 30, 70, 1.7, 2, 3),  # Chainlink config
-        'XRPUSDT': TradingConfig(3.1, 1.6, 32, 68, 1.6, 3, 2)   # XRP config
+        'XRPUSDT': TradingConfig(3.1, 1.6, 32, 68, 1.6, 3, 2),   # XRP config
+        'UNIUSDT': TradingConfig(3.2, 1.6, 30, 70, 1.6, 2, 3),   # Uniswap config
+        'DOGEUSDT': TradingConfig(3.0, 1.5, 32, 68, 1.5, 3, 2)  # Dogecoin config
     }
 
     @classmethod
@@ -89,4 +94,5 @@ class ConfigManager:
         print("   📋 Symbol Mapping:")
         for pair, symbol in cls.SYMBOL_MAPPING.items():
             print(f"      {pair} → {symbol}")
-        print("   💡 New Pairs: LINKUSDT (Chainlink) & XRPUSDT (Ripple) - More stable!")
+        print("   💡 Premium Pairs: LINK, XRP, UNI, DOGE - All very stable!")
+        print("   🚀 Total: 10 pairs ready for trading!")
