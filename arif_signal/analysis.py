@@ -100,7 +100,7 @@ class PatternDetector:
 
         # Higher timeframe trend
         htf_trend = self._get_higher_timeframe_trend(pair)
-                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trend: {}".format(pair, htf_trend))
+        if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trend: {}".format(pair, htf_trend))
 
         # Check for bullish sweep
         for support in support_levels:
