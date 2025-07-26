@@ -117,7 +117,7 @@ class PatternDetector:
                     if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep conditions met near support {:.4f}".format(pair, support))
                     return True, SignalType.BULLISH
                 else:
-                    if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bullish sweep near support {support:.4f} failed RSI check ({rsi:.2f} not < {config.rsi_overbought})")
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep near support {:.4f} failed RSI check ({:.2f} not < {})".format(pair, support, rsi, config.rsi_overbought))
 
         # Check for bearish sweep
         for resistance in resistance_levels:
@@ -134,15 +134,15 @@ class PatternDetector:
                     if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep conditions met near resistance {:.4f}".format(pair, resistance))
                     return True, SignalType.BEARISH
                 else:
-                    if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bearish sweep near resistance {resistance:.4f} failed RSI check ({rsi:.2f} not > {config.rsi_oversold})")
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep near resistance {:.4f} failed RSI check ({:.2f} not > {})".format(pair, resistance, rsi, config.rsi_oversold))
 
-        if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: No sweep pattern detected after checks")
+        if self.logger: self.logger.pattern_logger.debug("   🔍 {}: No sweep pattern detected after checks".format(pair))
         return False, None
 
     def detect_engulfing(self, candles: List[CandleData], direction: str) -> bool:
         """Enhanced engulfing pattern detection"""
         if len(candles) < 3:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 Engulfing check failed - insufficient candles ({len(candles)})")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 Engulfing check failed - insufficient candles ({})".format(len(candles)))
             return False
 
         c1, c2, c3 = candles[-3], candles[-2], candles[-1]
@@ -156,7 +156,7 @@ class PatternDetector:
                            c3.close < c2.open and c3.open > c2.close)
 
         if not basic_engulf:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 Engulfing check failed - basic pattern not found")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 Engulfing check failed - basic pattern not found")
             return False
 
         # Volume and body size confirmation
@@ -164,25 +164,25 @@ class PatternDetector:
         body_confirmed = c2.body_size > 0 and c3.body_size / c2.body_size >= 1.3
 
         if not volume_confirmed:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 Engulfing check failed - volume not confirmed (c3:{c3.volume:.0f} vs c2:{c2.volume:.0f} * 1.2)")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 Engulfing check failed - volume not confirmed (c3:{:.0f} vs c2:{:.0f} * 1.2)".format(c3.volume, c2.volume))
 
         if not body_confirmed:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 Engulfing check failed - body size not confirmed (c3:{c3.body_size:.4f} vs c2:{c2.body_size:.4f} * 1.3)")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 Engulfing check failed - body size not confirmed (c3:{:.4f} vs c2:{:.4f} * 1.3)".format(c3.body_size, c2.body_size))
 
         # Wick analysis
         if direction == SignalType.BULLISH:
             wick_confirmed = c3.lower_wick >= c3.body_size * 0.3
             if not wick_confirmed:
-                if self.logger: self.logger.pattern_logger.debug(f"   🔍 Bullish Engulfing check failed - lower wick not confirmed (c3 lower wick:{c3.lower_wick:.4f} vs body size:{c3.body_size:.4f} * 0.3)")
+                if self.logger: self.logger.pattern_logger.debug("   🔍 Bullish Engulfing check failed - lower wick not confirmed (c3 lower wick:{:.4f} vs body size:{:.4f} * 0.3)".format(c3.lower_wick, c3.body_size))
         else:  # Bearish
             wick_confirmed = c3.upper_wick >= c3.body_size * 0.3
             if not wick_confirmed:
-                if self.logger: self.logger.pattern_logger.debug(f"   🔍 Bearish Engulfing check failed - upper wick not confirmed (c3 upper wick:{c3.upper_wick:.4f} vs body size:{c3.body_size:.4f} * 0.3)")
+                if self.logger: self.logger.pattern_logger.debug("   🔍 Bearish Engulfing check failed - upper wick not confirmed (c3 upper wick:{:.4f} vs body size:{:.4f} * 0.3)".format(c3.upper_wick, c3.body_size))
 
         is_engulfing = basic_engulf and volume_confirmed and body_confirmed and wick_confirmed
 
         if is_engulfing:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 Engulfing check PASSED")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 Engulfing check PASSED")
 
         return is_engulfing
 
@@ -191,7 +191,7 @@ class PatternDetector:
         try:
             # This would use the exchange API in real implementation
             # For now, return NEUTRAL
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Simulating higher timeframe trend check...")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Simulating higher timeframe trend check...".format(pair))
             return "NEUTRAL"
         except Exception as e:
             # Log error if fetching HTF trend fails in a real scenario
