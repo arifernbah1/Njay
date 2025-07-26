@@ -1,13 +1,18 @@
 # analysis.py
 
-import numpy as np
 import logging
 import sys
+
+try:
+    import numpy as np
+except ImportError:
+    print("❌ numpy is required. Please install: pip install numpy")
+    sys.exit(1)
 from typing import List, Optional, Tuple
 
 # Import classes from other files
-from models import CandleData, SignalType
-from config import ConfigManager
+from .models import CandleData, SignalType
+from .config import ConfigManager
 
 # ========== TECHNICAL ANALYSIS ==========
 class TechnicalAnalyzer:

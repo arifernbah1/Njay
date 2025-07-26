@@ -3,7 +3,7 @@
 import os
 from dotenv import load_dotenv
 from typing import Dict
-from models import TradingConfig
+from .models import TradingConfig
 
 # Load environment variables from .env file
 load_dotenv()

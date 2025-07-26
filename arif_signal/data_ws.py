@@ -11,12 +11,12 @@ from collections import deque, defaultdict
 from typing import List, Optional, Tuple
 
 # Import classes from other files
-from models import CandleData, SignalData, SignalType
-from utils import TimeUtils
-from analysis import TechnicalAnalyzer, PatternDetector
-from processor import SignalProcessor
-from notifications import NotificationService
-from config import ConfigManager
+from .models import CandleData, SignalData, SignalType
+from .utils import TimeUtils
+from .analysis import TechnicalAnalyzer, PatternDetector
+from .processor import SignalProcessor
+from .notifications import NotificationService
+from .config import ConfigManager
 
 import logging
 

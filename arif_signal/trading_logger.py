@@ -6,20 +6,24 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import json
 from pathlib import Path
-import colorama # Import colorama for potential color support
+try:
+    import colorama # Import colorama for potential color support
+except ImportError:
+    colorama = None # Fallback if colorama is not available
 
-# Initialize colorama
-colorama.init()
+# Initialize colorama if available
+if colorama:
+    colorama.init()
 
 # Custom Formatter for basic coloring
 class ColoredFormatter(logging.Formatter):
     COLORS = {
-        'WARNING': colorama.Fore.YELLOW,
-        'ERROR': colorama.Fore.RED,
-        'CRITICAL': colorama.Fore.RED + colorama.Style.BRIGHT,
-        'INFO': colorama.Fore.GREEN,
-        'DEBUG': colorama.Fore.BLUE,
-        'RESET': colorama.Style.RESET_ALL
+        'WARNING': colorama.Fore.YELLOW if colorama else '',
+        'ERROR': colorama.Fore.RED if colorama else '',
+        'CRITICAL': (colorama.Fore.RED + colorama.Style.BRIGHT) if colorama else '',
+        'INFO': colorama.Fore.GREEN if colorama else '',
+        'DEBUG': colorama.Fore.BLUE if colorama else '',
+        'RESET': colorama.Style.RESET_ALL if colorama else ''
     }
 
     def format(self, record):

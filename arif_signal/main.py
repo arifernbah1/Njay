@@ -1,24 +1,39 @@
 # main.py
 
 # --- Import classes from other files ---
-from trading_logger import TradingLogger
-from models import CandleData, TradingConfig, SignalData, SignalType
-from utils import TimeUtils
-from analysis import TechnicalAnalyzer, PatternDetector
-from processor import SignalProcessor
-from notifications import NotificationService
-from data_ws import DataManager, WebSocketManager
-from config import ConfigManager
+from .trading_logger import TradingLogger
+from .models import CandleData, TradingConfig, SignalData, SignalType
+from .utils import TimeUtils
+from .analysis import TechnicalAnalyzer, PatternDetector
+from .processor import SignalProcessor
+from .notifications import NotificationService
+from .data_ws import DataManager, WebSocketManager
+from .config import ConfigManager
 
 import logging
 import sys
 import threading
 import time
 from collections import defaultdict, deque
-import colorama
+try:
+    import colorama
+except ImportError:
+    colorama = None
+
 from datetime import datetime, timedelta
-import numpy as np
-import requests
+
+try:
+    import numpy as np
+except ImportError:
+    print("❌ numpy is required. Please install: pip install numpy")
+    sys.exit(1)
+
+try:
+    import requests
+except ImportError:
+    print("❌ requests is required. Please install: pip install requests")
+    sys.exit(1)
+
 import json
 import ssl
 from typing import List, Optional, Tuple
