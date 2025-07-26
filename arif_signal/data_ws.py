@@ -204,8 +204,8 @@ class WebSocketManager:
         except Exception as e:
             # Log the message content if parsing fails for debugging
             # Use logger for errors, fallback if logger is None
-            if self.logger: self.logger.log_error("WebSocketManager", f"Message processing error: {e}. Message: {message[:200]}...")
-            else: logging.error(f"WebSocket message processing error: {e}. Message: {message[:200]}...")
+            if self.logger: self.logger.log_error("WebSocketManager", f"Message processing error: {e}. Message: {str(message)[:200]}...")
+            else: logging.error(f"WebSocket message processing error: {e}. Message: {str(message)[:200]}...")
 
     def _process_candle(self, pair: str, candle: CandleData):
         """Process new candle data (intended to run in a thread) with logging"""
