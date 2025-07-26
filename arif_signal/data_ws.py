@@ -200,9 +200,9 @@ class WebSocketManager:
 
             if 'result' in data or 'id' in data:
                 if self.logger: 
-                    self.logger.websocket_logger.info(f"WebSocket message: {data}")
+                    self.logger.websocket_logger.info("WebSocket message: {}".format(data))
                 else: 
-                    logging.info(f"WebSocket message: {data}")
+                    logging.info("WebSocket message: {}".format(data))
                 return
 
             if 'e' in data and data['e'] == 'kline' and 'k' in data:
@@ -236,7 +236,7 @@ class WebSocketManager:
 
             if len(candle_history) < 30:
                 if self.logger: 
-                    self.logger.websocket_logger.debug(f"📈 {pair}: Not enough history ({len(candle_history)}) to process signal.")
+                    self.logger.websocket_logger.debug("📈 {}: Not enough history ({}) to process signal.".format(pair, len(candle_history)))
                 return
 
             signal = self.signal_processor.process_signal(pair, candle, candle_history)
@@ -246,9 +246,9 @@ class WebSocketManager:
                     pass
                 else:
                     if self.logger: 
-                        self.logger.telegram_logger.warning(f"Failed to send signal notification for {pair} after retries.")
+                        self.logger.telegram_logger.warning("Failed to send signal notification for {} after retries.".format(pair))
                     else: 
-                        logging.warning(f"Failed to send signal notification for {pair} after retries.")
+                        logging.warning("Failed to send signal notification for {} after retries.".format(pair))
 
         except Exception as e:
             if self.logger: 
@@ -262,14 +262,14 @@ class WebSocketManager:
             if self.logger: 
                 self.logger.log_websocket_connection("ERROR")
             else: 
-                logging.error(f"WebSocket error: {error}")
+                logging.error("WebSocket error: {}".format(error))
 
     def _on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket close events with logging"""
         if self.logger: 
-            self.logger.websocket_logger.info(f"WebSocket connection closed. Code: {close_status_code}, Message: {close_msg}")
+            self.logger.websocket_logger.info("WebSocket connection closed. Code: {}, Message: {}".format(close_status_code, close_msg))
         else: 
-            logging.info(f"WebSocket connection closed. Code: {close_status_code}, Message: {close_msg}")
+            logging.info("WebSocket connection closed. Code: {}, Message: {}".format(close_status_code, close_msg))
 
         if self.is_running:
             if self.logger: 
@@ -294,7 +294,7 @@ class WebSocketManager:
             if self.logger: 
                 self.logger.log_websocket_connection("CONNECTED", len(streams))
             else: 
-                logging.info(f"Subscribed to {len(streams)} streams")
+                logging.info("Subscribed to {} streams".format(len(streams)))
         except Exception as e:
             if self.logger: 
                 self.logger.log_error("WebSocketManager", "Failed to send subscription message: {}".format(e))

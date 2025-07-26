@@ -100,7 +100,7 @@ class PatternDetector:
 
         # Higher timeframe trend
         htf_trend = self._get_higher_timeframe_trend(pair)
-        if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: HTF Trend: {htf_trend}")
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trend: {}".format(pair, htf_trend))
 
         # Check for bullish sweep
         for support in support_levels:
@@ -114,7 +114,7 @@ class PatternDetector:
                 rsi = self.analyzer.calculate_rsi(closes)
 
                 if rsi < config.rsi_overbought:
-                    if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bullish sweep conditions met near support {support:.4f}")
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep conditions met near support {:.4f}".format(pair, support))
                     return True, SignalType.BULLISH
                 else:
                     if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bullish sweep near support {support:.4f} failed RSI check ({rsi:.2f} not < {config.rsi_overbought})")
@@ -131,7 +131,7 @@ class PatternDetector:
                 rsi = self.analyzer.calculate_rsi(closes)
 
                 if rsi > config.rsi_oversold:
-                    if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bearish sweep conditions met near resistance {resistance:.4f}")
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep conditions met near resistance {:.4f}".format(pair, resistance))
                     return True, SignalType.BEARISH
                 else:
                     if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Bearish sweep near resistance {resistance:.4f} failed RSI check ({rsi:.2f} not > {config.rsi_oversold})")
@@ -195,5 +195,5 @@ class PatternDetector:
             return "NEUTRAL"
         except Exception as e:
             # Log error if fetching HTF trend fails in a real scenario
-            if self.logger: self.logger.log_error("PatternDetector", f"Error fetching higher timeframe trend for {pair}: {e}", pair=pair)
+            if self.logger: self.logger.log_error("PatternDetector", "Error fetching higher timeframe trend for {}: {}".format(pair, e), pair=pair)
             return "NEUTRAL"  # Return NEUTRAL on error
