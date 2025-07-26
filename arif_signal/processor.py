@@ -8,8 +8,9 @@ from typing import Optional, List, Tuple
 
 # Import classes from other files
 from models import CandleData, SignalData, SignalType
-from utils import ConfigManager, TimeUtils
+from utils import TimeUtils
 from analysis import TechnicalAnalyzer, PatternDetector
+from config import ConfigManager
 
 # ========== SIGNAL PROCESSOR ==========
 class SignalProcessor:

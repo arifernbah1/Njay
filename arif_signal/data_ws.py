@@ -12,10 +12,11 @@ from typing import List, Optional, Tuple
 
 # Import classes from other files
 from models import CandleData, SignalData, SignalType
-from utils import ConfigManager, TimeUtils
+from utils import TimeUtils
 from analysis import TechnicalAnalyzer, PatternDetector
 from processor import SignalProcessor
 from notifications import NotificationService
+from config import ConfigManager
 
 # ========== DATA MANAGER ==========
 class DataManager:

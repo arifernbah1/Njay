@@ -10,6 +10,7 @@ Bot trading otomatis yang mendeteksi pola sweep dan engulfing untuk menghasilkan
 - **Signal Filtering**: Multi-layer filtering system
 - **Telegram Notifications**: Sinyal otomatis via Telegram
 - **Advanced Logging**: Colored console + file logging
+- **Environment Variables**: Konfigurasi aman dengan .env file
 
 ## 📋 Requirements
 
@@ -30,16 +31,47 @@ cd arif_signal
 pip install -r requirements.txt
 ```
 
-3. **Setup Telegram Bot**
+3. **Setup environment variables**
+```bash
+# Copy example file
+cp .env.example .env
+
+# Edit .env file with your values
+nano .env
+```
+
+4. **Setup Telegram Bot**
    - Buat bot di [@BotFather](https://t.me/botfather)
    - Dapatkan token bot
    - Dapatkan chat ID dari [@userinfobot](https://t.me/userinfobot)
 
-4. **Configure bot**
-   - Edit `arif_signal/utils.py`
-   - Ganti `TELEGRAM_TOKEN` dan `TELEGRAM_CHAT_ID`
+5. **Configure .env file**
+```env
+# Telegram Configuration
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+TELEGRAM_CHAT_ID=your_telegram_chat_id_here
+
+# Trading Configuration
+TIMEFRAME=15m
+MIN_VOLUME_USDT=500000
+SIGNAL_COOLDOWN_MINUTES=30
+
+# Logging Configuration
+LOG_LEVEL=INFO
+```
 
 ## ⚙️ Configuration
+
+### Environment Variables (.env)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TELEGRAM_TOKEN` | Telegram bot token | Required |
+| `TELEGRAM_CHAT_ID` | Telegram chat ID | Required |
+| `TIMEFRAME` | Trading timeframe | `15m` |
+| `MIN_VOLUME_USDT` | Minimum volume filter | `500000` |
+| `SIGNAL_COOLDOWN_MINUTES` | Cooldown between signals | `30` |
+| `LOG_LEVEL` | Logging level | `INFO` |
 
 ### Trading Pairs
 ```python
@@ -47,13 +79,6 @@ TIER1_PAIRS = [
     'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT',
     'ADAUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT'
 ]
-```
-
-### Trading Parameters
-```python
-TIMEFRAME = '15m'
-MIN_VOLUME_USDT = 500000  # $500k minimum
-SIGNAL_COOLDOWN_MINUTES = 30
 ```
 
 ### Pair-specific Config
@@ -104,12 +129,18 @@ Bot aktif di jam optimal (WIB):
 arif_signal/
 ├── main.py              # Entry point
 ├── models.py            # Data structures
-├── utils.py             # Config & time utilities
+├── config.py            # Environment config
+├── utils.py             # Time utilities
 ├── analysis.py          # Technical analysis
 ├── processor.py         # Signal processing
 ├── notifications.py     # Telegram notifications
 ├── data_ws.py           # WebSocket & data management
 └── trading_logger.py    # Advanced logging
+
+.env                     # Environment variables
+.env.example             # Example config
+requirements.txt         # Dependencies
+README.md               # Documentation
 ```
 
 ## 🔧 Troubleshooting
@@ -120,15 +151,20 @@ arif_signal/
    - Pastikan semua dependencies terinstall
    - Jalankan `pip install -r requirements.txt`
 
-2. **WebSocket Connection Failed**
+2. **Configuration Errors**
+   - Pastikan file `.env` sudah dibuat
+   - Cek semua required variables sudah diisi
+   - Jalankan `python main.py` untuk validasi config
+
+3. **WebSocket Connection Failed**
    - Cek koneksi internet
    - Pastikan firewall tidak memblokir
 
-3. **Telegram Notifications Failed**
-   - Cek token bot dan chat ID
+4. **Telegram Notifications Failed**
+   - Cek token bot dan chat ID di `.env`
    - Pastikan bot sudah di-start
 
-4. **No Signals Generated**
+5. **No Signals Generated**
    - Cek jam trading (WIB)
    - Pastikan volume pair mencukupi
    - Cek daily signal limit

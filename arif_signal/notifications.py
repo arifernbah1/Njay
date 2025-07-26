@@ -9,7 +9,8 @@ from typing import Dict, List, Optional, Tuple
 
 # Import classes from other files
 from models import SignalData, SignalType
-from utils import ConfigManager, TimeUtils
+from utils import TimeUtils
+from config import ConfigManager
 
 # ========== NOTIFICATION SERVICE ==========
 class NotificationService:
