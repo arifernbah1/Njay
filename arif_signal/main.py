@@ -3,11 +3,12 @@
 # --- Import classes from other files ---
 from trading_logger import TradingLogger
 from models import CandleData, TradingConfig, SignalData, SignalType
-from utils import ConfigManager, TimeUtils
+from utils import TimeUtils
 from analysis import TechnicalAnalyzer, PatternDetector
 from processor import SignalProcessor
 from notifications import NotificationService
 from data_ws import DataManager, WebSocketManager
+from config import ConfigManager
 
 import logging
 import sys
@@ -28,8 +29,16 @@ class TradingBot:
     """Main trading bot application"""
 
     def __init__(self):
+        # Validate configuration first
+        if not ConfigManager.validate_config():
+            print("❌ Configuration validation failed. Please check your .env file.")
+            sys.exit(1)
+
+        # Print current configuration
+        ConfigManager.print_config()
+
         # Initialize enhanced logger first
-        self.logger = TradingLogger(log_level="INFO")
+        self.logger = TradingLogger(log_level=ConfigManager.LOG_LEVEL)
 
         # Initialize components, passing the logger instance
         self.data_manager = DataManager(logger=self.logger)
@@ -83,6 +92,9 @@ class TradingBot:
 
 # ========== ENTRY POINT ==========
 if __name__ == '__main__':
+    print("🤖 Starting Arif Signal Trading Bot...")
+    print("=" * 50)
+    
     # Instantiate and start the bot
     bot = TradingBot()
     bot.start()

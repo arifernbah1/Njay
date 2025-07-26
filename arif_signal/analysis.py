@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple
 
 # Import classes from other files
 from models import CandleData, SignalType
-from utils import ConfigManager
+from config import ConfigManager
 
 # ========== TECHNICAL ANALYSIS ==========
 class TechnicalAnalyzer:

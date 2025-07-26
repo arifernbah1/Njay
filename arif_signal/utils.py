@@ -5,42 +5,6 @@ import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-# Import classes from other files
-from models import TradingConfig
-
-# ========== CONFIGURATION MANAGER ==========
-class ConfigManager:
-    """Centralized configuration management"""
-
-    TIER1_PAIRS = [
-        'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT',
-        'ADAUSDT', 'AVAXUSDT', 'MATICUSDT', 'DOTUSDT'
-    ]
-
-    TIMEFRAME = '15m'
-    TELEGRAM_TOKEN = 'ISI_TOKEN_KAMU'  # TODO: Move to environment variables
-    TELEGRAM_CHAT_ID = 'ISI_CHAT_ID_KAMU'
-
-    CONFIGS: Dict[str, TradingConfig] = {
-        'BTCUSDT': TradingConfig(4.0, 2.0, 25, 75, 2.0, 1, 4),
-        'ETHUSDT': TradingConfig(3.8, 1.8, 28, 72, 2.0, 1, 4),
-        'BNBUSDT': TradingConfig(3.5, 1.7, 30, 70, 1.8, 2, 3),
-        'SOLUSDT': TradingConfig(3.6, 1.9, 27, 73, 1.8, 2, 3),
-        'ADAUSDT': TradingConfig(3.2, 1.6, 30, 70, 1.5, 3, 2),
-        'AVAXUSDT': TradingConfig(3.4, 1.8, 28, 72, 1.6, 2, 3),
-        'MATICUSDT': TradingConfig(3.0, 1.5, 32, 68, 1.5, 3, 2),
-        'DOTUSDT': TradingConfig(3.3, 1.7, 30, 70, 1.6, 3, 2)
-    }
-
-    MIN_VOLUME_USDT = 500000  # $500k minimum volume
-    SIGNAL_COOLDOWN_MINUTES = 30
-
-    @classmethod
-    def get_config(cls, pair: str) -> TradingConfig:
-        """Get trading config for a specific pair"""
-        return cls.CONFIGS.get(pair, cls.CONFIGS['BTCUSDT'])
-
-
 # ========== TIME UTILITIES ==========
 class TimeUtils:
     """Time utilities for trading sessions"""
