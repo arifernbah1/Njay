@@ -93,6 +93,6 @@ class ConfigManager:
         print(f"   🎯 Trading Pairs: {len(cls.TIER1_PAIRS)} pairs")
         print("   📋 Symbol Mapping:")
         for pair, symbol in cls.SYMBOL_MAPPING.items():
-            print(f"      {pair} → {symbol}")
+            print("      {} → {}".format(pair, symbol))
         print("   💡 Premium Pairs: LINK, XRP, UNI, DOGE - All very stable!")
         print("   🚀 Total: 10 pairs ready for trading!")

@@ -136,7 +136,7 @@ class TradingLogger:
         self.session_stats['websocket_messages'] += 1
 
     def log_signal_analysis_start(self, pair: str, entry_price: float):
-        self.signal_logger.info(f"🔍 {pair}: Starting signal analysis at ${entry_price:.4f}")
+        self.signal_logger.info("🔍 {}: Starting signal analysis at $ {:.4f}".format(pair, entry_price))
 
     def log_filter_result(self, pair: str, filter_name: str, result: bool, details: str = ""):
         status = "✅ PASS" if result else "❌ FAIL"
@@ -145,21 +145,21 @@ class TradingLogger:
 
     def log_pattern_detection(self, pair: str, pattern_type: str, detected: bool, details: dict = None):
         if detected:
-            self.pattern_logger.info(f"🎯 {pair}: {pattern_type} pattern DETECTED!")
+            self.pattern_logger.info("🎯 {}: {} pattern DETECTED!".format(pair, pattern_type))
             if details:
                 for key, value in details.items():
-                    self.pattern_logger.info(f"   📊 {key}: {value}")
+                    self.pattern_logger.info("   📊 {}: {}".format(key, value))
             self.session_stats['patterns_detected'] += 1
         else:
-            self.pattern_logger.debug(f"   🔍 {pair}: {pattern_type} pattern not found")
+            self.pattern_logger.debug("   🔍 {}: {} pattern not found".format(pair, pattern_type))
 
     def log_technical_analysis(self, pair: str, indicators: dict):
-        self.signal_logger.info(f"📊 {pair}: Technical Analysis:")
+        self.signal_logger.info("📊 {}: Technical Analysis:".format(pair))
         for indicator, value in indicators.items():
             if isinstance(value, float):
-                self.signal_logger.info(f"   📈 {indicator}: {value:.2f}")
+                self.signal_logger.info("   📈 {}: {:.2f}".format(indicator, value))
             else:
-                self.signal_logger.info(f"   📈 {indicator}: {value}")
+                self.signal_logger.info("   📈 {}: {}".format(indicator, value))
 
 
     def log_signal_generated(self, signal_data: dict):
@@ -169,32 +169,32 @@ class TradingLogger:
         rr_ratio = signal_data.get('risk_reward', 'N/A')
 
         self.signal_logger.info("🚀" + "=" * 60)
-        self.signal_logger.info(f"🎯 SIGNAL GENERATED: {pair} {direction}")
-        self.signal_logger.info(f"   💪 Strength: {strength:.1f}★" if isinstance(strength, float) else f"   💪 Strength: {strength}")
-        self.signal_logger.info(f"   💰 Entry: ${signal_data.get('entry_price', 'N/A'):.4f}" if isinstance(signal_data.get('entry_price'), float) else f"   💰 Entry: {signal_data.get('entry_price', 'N/A')}")
-        self.signal_logger.info(f"   🛑 Stop Loss: ${signal_data.get('stop_loss', 'N/A'):.4f}" if isinstance(signal_data.get('stop_loss'), float) else f"   🛑 Stop Loss: {signal_data.get('stop_loss', 'N/A')}")
-        self.signal_logger.info(f"   🎯 Take Profit: ${signal_data.get('take_profit', 'N/A'):.4f}" if isinstance(signal_data.get('take_profit'), float) else f"   🎯 Take Profit: {signal_data.get('take_profit', 'N/A')}")
-        self.signal_logger.info(f"   📊 Risk:Reward: 1:{rr_ratio:.1f}" if isinstance(rr_ratio, float) else f"   📊 Risk:Reward: 1:{rr_ratio}")
-        self.signal_logger.info(f"   🕐 Time: {datetime.now().strftime('%H:%M:%S WIB')}")
+        self.signal_logger.info("🎯 SIGNAL GENERATED: {} {}".format(pair, direction))
+        self.signal_logger.info("   💪 Strength: {:.1f}★".format(strength) if isinstance(strength, float) else "   💪 Strength: {}".format(strength))
+        self.signal_logger.info("   💰 Entry: $ {:.4f}".format(signal_data.get('entry_price')) if isinstance(signal_data.get('entry_price'), float) else "   💰 Entry: {}".format(signal_data.get('entry_price', 'N/A')))
+        self.signal_logger.info("   🛑 Stop Loss: $ {:.4f}".format(signal_data.get('stop_loss')) if isinstance(signal_data.get('stop_loss'), float) else "   🛑 Stop Loss: {}".format(signal_data.get('stop_loss', 'N/A')))
+        self.signal_logger.info("   🎯 Take Profit: $ {:.4f}".format(signal_data.get('take_profit')) if isinstance(signal_data.get('take_profit'), float) else "   🎯 Take Profit: {}".format(signal_data.get('take_profit', 'N/A')))
+        self.signal_logger.info("   📊 Risk:Reward: 1:{:.1f}".format(rr_ratio) if isinstance(rr_ratio, float) else "   📊 Risk:Reward: 1:{}".format(rr_ratio))
+        self.signal_logger.info("   🕐 Time: {}".format(datetime.now().strftime('%H:%M:%S WIB')))
         self.signal_logger.info("🚀" + "=" * 60)
 
         self.session_stats['signals_generated'] += 1
 
 
     def log_signal_filtered(self, pair: str, reason: str, details: dict = None):
-        self.signal_logger.info(f"🚫 {pair}: Signal FILTERED - {reason}")
+        self.signal_logger.info("🚫 {}: Signal FILTERED - {}".format(pair, reason))
         if details:
             for key, value in details.items():
-                self.signal_logger.info(f"   📊 {key}: {value}")
+                self.signal_logger.info("   📊 {}: {}".format(key, value))
 
         self.session_stats['signals_filtered'] += 1
 
 
     def log_telegram_notification(self, success: bool, pair: str, attempt: int = 1):
         if success:
-            self.telegram_logger.info(f"📱 {pair}: Telegram notification sent successfully")
+            self.telegram_logger.info("📱 {}: Telegram notification sent successfully".format(pair))
         else:
-            self.telegram_logger.warning(f"⚠️ {pair}: Telegram notification failed (attempt {attempt})")
+            self.telegram_logger.warning("⚠️ {}: Telegram notification failed (attempt {})".format(pair, attempt))
 
     def log_error(self, component: str, error_msg: str, pair: str = ""):
         pair_info = "{}: ".format(pair) if pair else ""
@@ -208,17 +208,17 @@ class TradingLogger:
         self.main_logger.info("📊" + "=" * 50)
         self.main_logger.info("📊 SESSION STATISTICS")
         self.main_logger.info("📊" + "=" * 50)
-        self.main_logger.info(f"⏱️  Uptime: {uptime}")
-        self.main_logger.info(f"🚀 Signals Generated: {self.session_stats['signals_generated']}")
-        self.main_logger.info(f"🚫 Signals Filtered: {self.session_stats['signals_filtered']}")
-        self.main_logger.info(f"🎯 Patterns Detected: {self.session_stats['patterns_detected']}")
-        self.main_logger.info(f"📡 WebSocket Messages: {self.session_stats['websocket_messages']}")
-        self.main_logger.info(f"💥 Errors: {self.session_stats['errors']}")
+        self.main_logger.info("⏱️  Uptime: {}".format(uptime))
+        self.main_logger.info("🚀 Signals Generated: {}".format(self.session_stats['signals_generated']))
+        self.main_logger.info("🚫 Signals Filtered: {}".format(self.session_stats['signals_filtered']))
+        self.main_logger.info("🎯 Patterns Detected: {}".format(self.session_stats['patterns_detected']))
+        self.main_logger.info("📡 WebSocket Messages: {}".format(self.session_stats['websocket_messages']))
+        self.main_logger.info("💥 Errors: {}".format(self.session_stats['errors']))
 
         total_analysis = self.session_stats['signals_generated'] + self.session_stats['signals_filtered']
         if total_analysis > 0:
             efficiency = (self.session_stats['signals_generated'] / total_analysis) * 100
-            self.main_logger.info(f"📈 Signal Efficiency: {efficiency:.1f}%")
+            self.main_logger.info("📈 Signal Efficiency: {:.1f}%".format(efficiency))
 
         self.main_logger.info("📊" + "=" * 50)
 
