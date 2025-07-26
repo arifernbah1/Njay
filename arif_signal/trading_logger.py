@@ -136,8 +136,8 @@ class TradingLogger:
 
     def log_filter_result(self, pair: str, filter_name: str, result: bool, details: str = ""):
         status = "✅ PASS" if result else "❌ FAIL"
-        detail_msg = f" ({details})" if details else ""
-        self.signal_logger.debug(f"   🧪 {pair}: {filter_name} - {status}{detail_msg}")
+        detail_msg = " ({})".format(details) if details else ""
+        self.signal_logger.debug("   🧪 {}: {} - {}{}".format(pair, filter_name, status, detail_msg))
 
     def log_pattern_detection(self, pair: str, pattern_type: str, detected: bool, details: dict = None):
         if detected:
@@ -193,9 +193,9 @@ class TradingLogger:
             self.telegram_logger.warning(f"⚠️ {pair}: Telegram notification failed (attempt {attempt})")
 
     def log_error(self, component: str, error_msg: str, pair: str = ""):
-        pair_info = f"{pair}: " if pair else ""
+        pair_info = "{}: ".format(pair) if pair else ""
         # Use the root logger for general errors
-        logging.error(f"💥 {component} ERROR - {pair_info}{error_msg}")
+        logging.error("💥 {} ERROR - {}{}".format(component, pair_info, error_msg))
         self.session_stats['errors'] += 1
 
     def log_session_stats(self):
