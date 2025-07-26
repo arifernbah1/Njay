@@ -224,9 +224,9 @@ class WebSocketManager:
 
         except Exception as e:
             if self.logger: 
-                self.logger.log_error("WebSocketManager", f"Message processing error: {e}. Message: {str(message)[:200]}...")
+                self.logger.log_error("WebSocketManager", "Message processing error: {}. Message: {}...".format(e, str(message)[:200]))
             else: 
-                logging.error(f"WebSocket message processing error: {e}. Message: {str(message)[:200]}...")
+                logging.error("WebSocket message processing error: {}. Message: {}...".format(e, str(message)[:200]))
 
     def _process_candle(self, pair: str, candle: CandleData):
         """Process new candle data (intended to run in a thread) with logging"""
@@ -252,9 +252,9 @@ class WebSocketManager:
 
         except Exception as e:
             if self.logger: 
-                self.logger.log_error("WebSocketManager", f"Error processing candle: {e}", pair=pair)
+                self.logger.log_error("WebSocketManager", "Error processing candle: {}".format(e), pair=pair)
             else: 
-                logging.error(f"Error processing candle for {pair} in thread: {e}")
+                logging.error("Error processing candle for {} in thread: {}".format(pair, e))
 
     def _on_error(self, ws, error):
         """Handle WebSocket errors with logging"""
@@ -297,6 +297,6 @@ class WebSocketManager:
                 logging.info(f"Subscribed to {len(streams)} streams")
         except Exception as e:
             if self.logger: 
-                self.logger.log_error("WebSocketManager", f"Failed to send subscription message: {e}")
+                self.logger.log_error("WebSocketManager", "Failed to send subscription message: {}".format(e))
             else: 
-                logging.error(f"Failed to send subscription message: {e}")
+                logging.error("Failed to send subscription message: {}".format(e))
