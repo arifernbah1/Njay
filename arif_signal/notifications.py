@@ -95,9 +95,9 @@ class NotificationService:
             except Exception as e:
                 # Log failed attempt and error
                 self.logger.log_telegram_notification(False, pair, attempt=attempt+1)
-                                      self.logger.log_error("NotificationService", "Telegram attempt {} failed: {}".format(attempt + 1, e), pair=pair)
+                self.logger.log_error("NotificationService", "Telegram attempt {} failed: {}".format(attempt + 1, e), pair=pair)
                 time.sleep(1)
 
         # Log final failure after retries
-                      self.logger.log_error("NotificationService", "Telegram notification failed after 3 attempts for {}".format(pair), pair=pair)
+        self.logger.log_error("NotificationService", "Telegram notification failed after 3 attempts for {}".format(pair), pair=pair)
         return False
