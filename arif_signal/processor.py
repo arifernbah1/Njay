@@ -97,7 +97,7 @@ class SignalProcessor:
 
         except Exception as e:
             # Log specific error during R:R calculation
-            self.logger.log_error("SignalProcessor", f"R:R calculation error: {e}")
+            self.logger.log_error("SignalProcessor", "R:R calculation error: {}".format(e))
             # Return default values on error to avoid stopping the process
             return 0, entry_price * 0.98, entry_price * 1.02
 

@@ -34,9 +34,9 @@ class DataManager:
             })
         except Exception as e:
             if self.logger: 
-                self.logger.log_error("DataManager", f"Failed to initialize ccxt: {e}. Data fetching will be simulated.")
+                self.logger.log_error("DataManager", "Failed to initialize ccxt: {}. Data fetching will be simulated.".format(e))
             else: 
-                logging.error(f"Failed to initialize ccxt: {e}. Data fetching will be simulated.")
+                logging.error("Failed to initialize ccxt: {}. Data fetching will be simulated.".format(e))
             self.exchange = None
 
     def add_candle(self, pair: str, candle: CandleData):
@@ -74,7 +74,7 @@ class DataManager:
                 if self.logger: 
                     self.logger.log_data_initialization(pair, 100)
                 else: 
-                    logging.info(f"✅ {pair}: 100 simulated candles loaded")
+                    logging.info("✅ {}: 100 simulated candles loaded".format(pair))
             return
 
         for pair in ConfigManager.TIER1_PAIRS:
@@ -96,14 +96,14 @@ class DataManager:
                 if self.logger: 
                     self.logger.log_data_initialization(pair, len(ohlcv))
                 else: 
-                    logging.info(f"✅ {pair}: {len(ohlcv)} candles loaded")
+                    logging.info("✅ {}: {} candles loaded".format(pair, len(ohlcv)))
                 time.sleep(0.1)
 
             except Exception as e:
                 if self.logger: 
-                    self.logger.log_error("DataManager", f"Error loading data: {e}", pair=pair)
+                    self.logger.log_error("DataManager", "Error loading data: {}".format(e), pair=pair)
                 else: 
-                    logging.error(f"Error loading data for {pair}: {e}. Simulating data for this pair.")
+                    logging.error("Error loading data for {}: {}. Simulating data for this pair.".format(pair, e))
                 
                 dummy_candle = CandleData(
                     timestamp=int(time.time() * 1000), 
@@ -116,9 +116,9 @@ class DataManager:
                 for _ in range(100):
                     self.add_candle(pair, dummy_candle)
                 if self.logger: 
-                    self.logger.data_logger.info(f"✅ {pair}: 100 simulated candles loaded after error")
+                    self.logger.data_logger.info("✅ {}: 100 simulated candles loaded after error".format(pair))
                 else: 
-                    logging.info(f"✅ {pair}: 100 simulated candles loaded after error")
+                    logging.info("✅ {}: 100 simulated candles loaded after error".format(pair))
 
 
 # ========== WEBSOCKET MANAGER ==========
@@ -182,9 +182,9 @@ class WebSocketManager:
 
         except Exception as e:
             if self.logger: 
-                self.logger.log_error("WebSocketManager", f"Connection error in thread: {e}")
+                self.logger.log_error("WebSocketManager", "Connection error in thread: {}".format(e))
             else: 
-                logging.error(f"WebSocket connection error in thread: {e}")
+                logging.error("WebSocket connection error in thread: {}".format(e))
             if self.is_running:
                 if self.logger: 
                     self.logger.log_websocket_connection("RECONNECTING")
@@ -286,7 +286,7 @@ class WebSocketManager:
         else: 
             logging.info("WebSocket connected!")
 
-        streams = [f"{pair.lower()}@kline_{ConfigManager.TIMEFRAME}" for pair in ConfigManager.TIER1_PAIRS]
+        streams = ["{}@kline_{}".format(pair.lower(), ConfigManager.TIMEFRAME) for pair in ConfigManager.TIER1_PAIRS]
         subscribe_message = {"method": "SUBSCRIBE", "params": streams, "id": 1}
 
         try:

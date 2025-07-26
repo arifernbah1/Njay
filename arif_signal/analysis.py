@@ -77,7 +77,7 @@ class PatternDetector:
     def detect_sweep(self, candles: List[CandleData], pair: str) -> Tuple[bool, Optional[str]]:
         """Advanced sweep detection"""
         if len(candles) < 20:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Sweep check failed - insufficient candles ({len(candles)})")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - insufficient candles ({})".format(pair, len(candles)))
             return False, None
 
         current = candles[-1]
@@ -88,14 +88,14 @@ class PatternDetector:
         avg_volume = sum(recent_volumes) / len(recent_volumes) if len(recent_volumes) > 0 else 0
 
         if avg_volume > 0 and current.volume <= avg_volume * config.volume_multiplier:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Sweep check failed - insufficient volume ({current.volume:.0f} vs avg {avg_volume:.0f} * {config.volume_multiplier})")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - insufficient volume ({:.0f} vs avg {:.0f} * {})".format(pair, current.volume, avg_volume, config.volume_multiplier))
             return False, None
 
         # Get support/resistance levels
         support_levels, resistance_levels = self.analyzer.find_support_resistance(candles)
 
         if not support_levels and not resistance_levels:
-            if self.logger: self.logger.pattern_logger.debug(f"   🔍 {pair}: Sweep check failed - no significant S/R levels found")
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - no significant S/R levels found".format(pair))
             return False, None
 
         # Higher timeframe trend

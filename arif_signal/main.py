@@ -98,7 +98,7 @@ class TradingBot:
             self.logger.main_logger.info("Bot stopped by user")
             self.stop()
         except Exception as e:
-            self.logger.log_error("MAIN", f"Bot error: {e}")
+            self.logger.log_error("MAIN", "Bot error: {}".format(e))
             self.stop()
 
     def _send_start_notification(self):
@@ -140,7 +140,7 @@ class TradingBot:
                 self.logger.main_logger.warning("⚠️ Failed to send start notification to Telegram")
                 
         except Exception as e:
-            self.logger.log_error("MAIN", f"Error sending start notification: {e}")
+            self.logger.log_error("MAIN", "Error sending start notification: {}".format(e))
 
     def stop(self):
         """Stop the trading bot"""
@@ -180,7 +180,7 @@ class TradingBot:
                 self.logger.main_logger.warning("⚠️ Failed to send stop notification to Telegram")
                 
         except Exception as e:
-            self.logger.log_error("MAIN", f"Error sending stop notification: {e}")
+            self.logger.log_error("MAIN", "Error sending stop notification: {}".format(e))
 
 
 # ========== ENTRY POINT ==========
