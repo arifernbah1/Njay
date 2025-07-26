@@ -40,18 +40,18 @@ class ConfigManager:
     SIGNAL_COOLDOWN_MINUTES = int(os.getenv('SIGNAL_COOLDOWN_MINUTES', '30'))
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
-    # Trading configurations for each pair - Updated for all 10 pairs
+    # Trading configurations for each pair - Conservative for development/testing
     CONFIGS: Dict[str, TradingConfig] = {
-        'BTCUSDT': TradingConfig(4.0, 2.0, 25, 75, 2.0, 1, 4),
-        'ETHUSDT': TradingConfig(3.8, 1.8, 28, 72, 2.0, 1, 4),
-        'BNBUSDT': TradingConfig(3.5, 1.7, 30, 70, 1.8, 2, 3),
-        'SOLUSDT': TradingConfig(3.6, 1.9, 27, 73, 1.8, 2, 3),
-        'ADAUSDT': TradingConfig(3.2, 1.6, 30, 70, 1.5, 3, 2),
-        'AVAXUSDT': TradingConfig(3.4, 1.8, 28, 72, 1.6, 2, 3),
-        'LINKUSDT': TradingConfig(3.3, 1.7, 30, 70, 1.7, 2, 3),  # Chainlink config
-        'XRPUSDT': TradingConfig(3.1, 1.6, 32, 68, 1.6, 3, 2),   # XRP config
-        'UNIUSDT': TradingConfig(3.2, 1.6, 30, 70, 1.6, 2, 3),   # Uniswap config
-        'DOGEUSDT': TradingConfig(3.0, 1.5, 32, 68, 1.5, 3, 2)  # Dogecoin config
+        'BTCUSDT': TradingConfig(4.5, 2.5, 20, 80, 2.5, 1, 2),  # Premium quality, max 2/day
+        'ETHUSDT': TradingConfig(4.3, 2.3, 22, 78, 2.5, 1, 2),  # Premium quality, max 2/day
+        'BNBUSDT': TradingConfig(4.2, 2.2, 25, 75, 2.2, 2, 2),  # High quality, max 2/day
+        'SOLUSDT': TradingConfig(4.1, 2.1, 25, 75, 2.0, 2, 2),  # High quality, max 2/day
+        'ADAUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 3, 1),  # Good quality, max 1/day
+        'AVAXUSDT': TradingConfig(4.1, 2.1, 26, 74, 2.0, 2, 2), # High quality, max 2/day
+        'LINKUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 2, 2), # Good quality, max 2/day
+        'XRPUSDT': TradingConfig(3.9, 1.9, 30, 70, 1.9, 3, 1),  # Good quality, max 1/day
+        'UNIUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 2, 2),  # Good quality, max 2/day
+        'DOGEUSDT': TradingConfig(3.8, 1.8, 32, 68, 1.8, 3, 1)  # Good quality, max 1/day
     }
 
     @classmethod
