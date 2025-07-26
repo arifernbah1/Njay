@@ -11,8 +11,8 @@ except ImportError:
 from typing import List, Optional, Tuple
 
 # Import classes from other files
-from .models import CandleData, SignalType
-from .config import ConfigManager
+from models import CandleData, SignalType
+from config import ConfigManager
 
 # ========== TECHNICAL ANALYSIS ==========
 class TechnicalAnalyzer:
