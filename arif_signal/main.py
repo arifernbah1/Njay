@@ -1,14 +1,14 @@
 # main.py
 
 # --- Import classes from other files ---
-from arif_signal.data_manager import DataManager
-from arif_signal.processor import SignalProcessor
-from arif_signal.config import ConfigManager
-from arif_signal.trading_logger import TradingLogger, TradingSignal
-from arif_signal.notifications import NotificationService
-from arif_signal.error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
-from arif_signal.health_monitor import BotHealthMonitor, ComponentStatus
-from arif_signal.models import SignalData, SignalType
+from data_manager import DataManager
+from processor import SignalProcessor
+from config import ConfigManager
+from trading_logger import TradingLogger, TradingSignal
+from notifications import NotificationService
+from error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
+from health_monitor import BotHealthMonitor, ComponentStatus
+from models import SignalData, SignalType
 from datetime import datetime
 import time
 import sys

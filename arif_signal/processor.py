@@ -11,7 +11,7 @@ from models import CandleData, SignalData, SignalType
 from utils import TimeUtils
 from analysis import TechnicalAnalyzer, PatternDetector
 from config import ConfigManager
-from arif_signal.swing_setup import SwingSetupManager
+from swing_setup import SwingSetupManager
 
 # ========== SIGNAL PROCESSOR ==========
 class SignalProcessor:
