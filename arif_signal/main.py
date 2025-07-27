@@ -33,8 +33,8 @@ class ArifSignalApp:
             
             # Initialize Telegram notification service
             self.notification_service = NotificationService(
-                bot_token=self.config.get_telegram_token(),
-                chat_id=self.config.get_telegram_chat_id(),
+                bot_token=ConfigManager.TELEGRAM_TOKEN,
+                chat_id=ConfigManager.TELEGRAM_CHAT_ID,
                 trading_logger=self.trading_logger
             )
             
