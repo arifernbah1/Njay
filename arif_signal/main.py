@@ -57,7 +57,7 @@ class TradingBot:
 
         # Initialize components, passing the logger instance
         self.data_manager = DataManager(logger=self.logger)
-        self.analyzer = TechnicalAnalyzer(logger=self.logger)
+        self.analyzer = TechnicalAnalyzer(logger=self.logger, exchange=self.data_manager.exchange)
         self.detector = PatternDetector(self.analyzer, logger=self.logger)
         self.signal_processor = SignalProcessor(
             self.analyzer,

@@ -17,9 +17,10 @@ from config import ConfigManager
 # ========== TECHNICAL ANALYSIS ==========
 class TechnicalAnalyzer:
     """Technical analysis calculations"""
-
-    def __init__(self, logger: Optional['TradingLogger'] = None):
+    # Add logger parameter
+    def __init__(self, logger: Optional[TradingLogger] = None, exchange=None):
         self.logger = logger
+        self.exchange = exchange  # Store exchange for multi-TF analysis
 
     @staticmethod
     def calculate_rsi(prices: List[float], period: int = 14) -> float:
@@ -187,13 +188,69 @@ class PatternDetector:
         return is_engulfing
 
     def _get_higher_timeframe_trend(self, pair: str) -> str:
-        """Get higher timeframe trend - simplified version"""
+        """Get higher timeframe trend - real implementation"""
         try:
-            # This would use the exchange API in real implementation
-            # For now, return NEUTRAL
-            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Simulating higher timeframe trend check...".format(pair))
-            return "NEUTRAL"
+            # Get exchange from TechnicalAnalyzer
+            if not hasattr(self.analyzer, 'exchange'):
+                # Try to get exchange from data_manager if available
+                if hasattr(self.analyzer, 'data_manager') and hasattr(self.analyzer.data_manager, 'exchange'):
+                    exchange = self.analyzer.data_manager.exchange
+                else:
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: No exchange available, using NEUTRAL".format(pair))
+                    return "NEUTRAL"
+            else:
+                exchange = self.analyzer.exchange
+            
+            if not exchange:
+                if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Exchange not initialized, using NEUTRAL".format(pair))
+                return "NEUTRAL"
+            
+            # Convert pair format for ccxt
+            ccxt_pair = pair.replace('USDT', '/USDT')
+            
+            # Fetch 1H data
+            ohlcv_1h = exchange.fetch_ohlcv(ccxt_pair, '1h', limit=50)
+            # Fetch 4H data  
+            ohlcv_4h = exchange.fetch_ohlcv(ccxt_pair, '4h', limit=50)
+            
+            if len(ohlcv_1h) < 20 or len(ohlcv_4h) < 20:
+                if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Insufficient HTF data, using NEUTRAL".format(pair))
+                return "NEUTRAL"
+            
+            # Calculate trends
+            trend_1h = self._calculate_trend(ohlcv_1h)
+            trend_4h = self._calculate_trend(ohlcv_4h)
+            
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trends - 1H: {}, 4H: {}".format(pair, trend_1h, trend_4h))
+            
+            # Combine analysis
+            if trend_4h == "BULLISH" and trend_1h == "BULLISH":
+                return "BULLISH"
+            elif trend_4h == "BEARISH" and trend_1h == "BEARISH":
+                return "BEARISH"
+            else:
+                return "NEUTRAL"
+                
         except Exception as e:
-            # Log error if fetching HTF trend fails in a real scenario
             if self.logger: self.logger.log_error("PatternDetector", "Error fetching higher timeframe trend for {}: {}".format(pair, e), pair=pair)
             return "NEUTRAL"  # Return NEUTRAL on error
+    
+    def _calculate_trend(self, ohlcv_data):
+        """Calculate trend from OHLCV data"""
+        if len(ohlcv_data) < 20:
+            return "NEUTRAL"
+        
+        closes = [float(candle[4]) for candle in ohlcv_data]
+        
+        # Simple trend calculation using SMA
+        sma_20 = sum(closes[-20:]) / 20
+        sma_10 = sum(closes[-10:]) / 10
+        current_price = closes[-1]
+        
+        # Trend logic
+        if current_price > sma_20 and sma_10 > sma_20:
+            return "BULLISH"
+        elif current_price < sma_20 and sma_10 < sma_20:
+            return "BEARISH"
+        else:
+            return "NEUTRAL"
