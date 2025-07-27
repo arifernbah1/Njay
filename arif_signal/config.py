@@ -48,7 +48,7 @@ class ConfigManager:
     # Dual Mode Configuration - Both modes run simultaneously
     DUAL_MODE_CONFIG = {
         TradingMode.SCALPING: {
-            'timeframe': '5m',
+            'timeframe': '15m',  # Changed from 5m to 15m
             'enabled': True,
             'min_strength': 2.5,
             'volume_multiplier': 1.2,

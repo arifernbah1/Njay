@@ -67,7 +67,7 @@ class TradingBot:
             # Log bot startup using the logger with dual mode info
             self.logger.log_bot_start(
                 ConfigManager.TIER1_PAIRS, 
-                "DUAL MODE (5m + 1h)",
+                "DUAL MODE (15m + 1h)",
                 dual_mode=True
             )
             

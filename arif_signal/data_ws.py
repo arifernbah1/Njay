@@ -27,7 +27,7 @@ class DataManager:
     def __init__(self, maxlen: int = 200, logger: Optional[TradingLogger] = None):
         self.logger = logger # Store logger
         # Separate data storage for each mode
-        self.live_data_scalping = defaultdict(lambda: deque(maxlen=maxlen))  # 5m data
+        self.live_data_scalping = defaultdict(lambda: deque(maxlen=maxlen))  # 15m data
         self.live_data_swing = defaultdict(lambda: deque(maxlen=maxlen))     # 1h data
         
         # Use try-except for ccxt initialization in case of environment issues
@@ -231,7 +231,7 @@ class WebSocketManager:
                         logging.warning("{} WebSocket thread did not terminate cleanly.".format(thread_name))
 
     def _connect_scalping(self):
-        """Establish WebSocket connection for Scalping mode (5m)"""
+        """Establish WebSocket connection for Scalping mode (15m)"""
         try:
             ws_url = "wss://fstream.binance.com/ws"
             self.ws_scalping = websocket.WebSocketApp(
@@ -406,8 +406,8 @@ class WebSocketManager:
         else:
             logging.info("Scalping WebSocket connected!")
         
-        # Subscribe to 5m streams
-        streams = ["{}@kline_5m".format(pair.lower()) for pair in ConfigManager.TIER1_PAIRS]
+        # Subscribe to 15m streams (changed from 5m)
+        streams = ["{}@kline_15m".format(pair.lower()) for pair in ConfigManager.TIER1_PAIRS]
         subscribe_message = {"method": "SUBSCRIBE", "params": streams, "id": 1}
         
         try:
