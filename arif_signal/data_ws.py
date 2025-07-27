@@ -40,10 +40,10 @@ class DataManager:
         except Exception as e:
             # Use logger for errors, fallback to standard logging if logger is None
             if self.logger:
-                self.logger.log_error("DataManager", "Failed to initialize ccxt: {}. Data fetching will be simulated.".format(e))
+                self.logger.log_error("DataManager", f"Failed to initialize ccxt: {e}. Bot will stop.")
             else:
-                logging.error("Failed to initialize ccxt: {}. Data fetching will be simulated.".format(e))
-            self.exchange = None # Use None if initialization fails
+                logging.error(f"Failed to initialize ccxt: {e}. Bot will stop.")
+            raise RuntimeError(f"Failed to initialize ccxt: {e}")
 
     def add_candle(self, pair: str, candle: CandleData, mode: str = "SCALPING"):
         """Add new candle data for specific mode"""
@@ -61,49 +61,22 @@ class DataManager:
 
     def initialize_data(self):
         """Load initial historical data for both modes with logging"""
-        # Use logger for info messages, fallback to standard logging if logger is None
         if self.logger:
             self.logger.data_logger.info("Loading historical data for dual mode...")
         else:
             logging.info("Loading historical data for dual mode...")
 
         if not self.exchange:
-            # Use logger for warnings, fallback if logger is None
             if self.logger:
-                self.logger.data_logger.warning("ccxt not initialized. Simulating data loading for dual mode.")
+                self.logger.data_logger.error("ccxt not initialized. Cannot load data. Bot will stop.")
             else:
-                logging.warning("ccxt not initialized. Simulating data loading for dual mode.")
-            
-            # Simulate adding some dummy data if ccxt failed for both modes
-            for pair in ConfigManager.TIER1_PAIRS:
-                # Scalping mode data (5m)
-                for _ in range(100):
-                    dummy_candle_scalping = CandleData(
-                        timestamp=int(time.time() * 1000), 
-                        open=100.0, high=101.0, low=99.0, close=100.5, volume=1000.0
-                    )
-                    self.add_candle(pair, dummy_candle_scalping, "SCALPING")
-                
-                # Swing mode data (1h)
-                for _ in range(100):
-                    dummy_candle_swing = CandleData(
-                        timestamp=int(time.time() * 1000), 
-                        open=100.0, high=101.0, low=99.0, close=100.5, volume=1000.0
-                    )
-                    self.add_candle(pair, dummy_candle_swing, "SWING")
-                
-                # Use logger for data initialization success, fallback if logger is None
-                if self.logger:
-                    self.logger.log_data_initialization(pair, 200)  # 100 for each mode
-                else:
-                    logging.info("✅ {}: 200 simulated candles loaded (100 scalping + 100 swing)".format(pair))
-            return
+                logging.error("ccxt not initialized. Cannot load data. Bot will stop.")
+            raise RuntimeError("ccxt not initialized. Cannot load data.")
 
         # Load real data for both modes
         for pair in ConfigManager.TIER1_PAIRS:
             try:
                 ccxt_pair = ConfigManager.get_binance_symbol(pair)
-                
                 # Load Scalping data (5m)
                 ohlcv_scalping = self.exchange.fetch_ohlcv(
                     ccxt_pair, 
@@ -121,7 +94,6 @@ class DataManager:
                         volume=float(candle[5])
                     )
                     self.add_candle(pair, candle_data, "SCALPING")
-                
                 # Load Swing data (1h)
                 ohlcv_swing = self.exchange.fetch_ohlcv(
                     ccxt_pair, 
@@ -139,39 +111,16 @@ class DataManager:
                         volume=float(candle[5])
                     )
                     self.add_candle(pair, candle_data, "SWING")
-                
-                # Use logger for data initialization success, fallback if logger is None
                 if self.logger:
                     self.logger.log_data_initialization(pair, len(ohlcv_scalping) + len(ohlcv_swing))
                 else:
-                    logging.info("✅ {}: {} candles loaded ({} scalping + {} swing)".format(
-                        pair, len(ohlcv_scalping) + len(ohlcv_swing), 
-                        len(ohlcv_scalping), len(ohlcv_swing)
-                    ))
-                
-                time.sleep(0.1) # Use actual time module
-                
+                    logging.info(f"✅ {pair}: {len(ohlcv_scalping) + len(ohlcv_swing)} candles loaded (scalping + swing)")
             except Exception as e:
-                # Use logger for errors, fallback if logger is None
                 if self.logger:
-                    self.logger.log_error("DataManager", "Error loading data: {}".format(e), pair=pair)
+                    self.logger.log_error("DataManager", f"Error loading data for {pair}: {e}. Bot will stop.")
                 else:
-                    logging.error("Error loading data for {}: {}. Simulating data for this pair.".format(pair, e))
-                
-                # Simulate adding some dummy data for the failed pair
-                for _ in range(100):
-                    dummy_candle = CandleData(
-                        timestamp=int(time.time() * 1000), 
-                        open=100.0, high=101.0, low=99.0, close=100.5, volume=1000.0
-                    )
-                    self.add_candle(pair, dummy_candle, "SCALPING")
-                    self.add_candle(pair, dummy_candle, "SWING")
-                
-                # Use logger for simulated data loading after error, fallback if logger is None
-                if self.logger:
-                    self.logger.data_logger.info("✅ {}: 200 simulated candles loaded after error (100 scalping + 100 swing)".format(pair))
-                else:
-                    logging.info("✅ {}: 200 simulated candles loaded after error (100 scalping + 100 swing)".format(pair))
+                    logging.error(f"Error loading data for {pair}: {e}. Bot will stop.")
+                raise RuntimeError(f"Error loading data for {pair}: {e}")
 
 
 # ========== WEBSOCKET MANAGER ==========
