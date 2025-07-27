@@ -13,6 +13,7 @@ from typing import List, Optional, Tuple
 # Import classes from other files
 from models import CandleData, SignalType
 from config import ConfigManager
+from trading_logger import TradingLogger
 
 # ========== TECHNICAL ANALYSIS ==========
 class TechnicalAnalyzer:
