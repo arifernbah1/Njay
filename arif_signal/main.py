@@ -33,7 +33,7 @@ class ArifSignalApp:
         )
     
     def run(self):
-        """Main application loop with Trading Logger integration"""
+        """Main application loop with Trading Logger integration and Swing Setup monitoring"""
         self.trading_logger.log_trading_alert(
             "SYSTEM_START", 
             f"Starting Arif Signal System in {self.current_mode} mode",
@@ -54,6 +54,10 @@ class ArifSignalApp:
                 
                 # Process signals for current mode
                 signals = self.process_signals_for_mode(self.current_mode)
+                
+                # Monitor swing setups (for SWING mode)
+                if self.current_mode == "SWING":
+                    self.monitor_swing_setups()
                 
                 # Log performance summary
                 if signals:
@@ -101,7 +105,7 @@ class ArifSignalApp:
             return self.current_mode
     
     def process_signals_for_mode(self, mode: str) -> list:
-        """Process signals for specific mode with Trading Logger"""
+        """Process signals for specific mode with Trading Logger and Swing Setup"""
         signals = []
         
         try:
@@ -128,7 +132,7 @@ class ArifSignalApp:
                         )
                         continue
                     
-                    # Process signal with Trading Logger
+                    # Process signal with Trading Logger and Swing Setup
                     signal = self.signal_processor.process_signal(candles, pair, mode)
                     
                     if signal:
@@ -143,7 +147,7 @@ class ArifSignalApp:
                             risk_reward=signal.risk_reward,
                             mode=mode,
                             timestamp=signal.timestamp,
-                            pattern=self._get_signal_pattern(signal),
+                            pattern=self._get_signal_pattern(signal, mode),
                             volume_ratio=self._get_volume_ratio(candles),
                             rsi=self._get_rsi(candles),
                             trend=self._get_trend(candles)
@@ -195,12 +199,54 @@ class ArifSignalApp:
         
         return signals
     
-    def _get_signal_pattern(self, signal: SignalData) -> str:
-        """Extract pattern from signal (placeholder)"""
-        return "Sweep"  # Placeholder
+    def monitor_swing_setups(self):
+        """Monitor and log swing setups status"""
+        try:
+            active_setups = self.signal_processor.swing_setup_manager.get_active_setups()
+            
+            if active_setups:
+                self.trading_logger.log_trading_alert(
+                    "SWING_SETUP_STATUS",
+                    f"Active swing setups: {len(active_setups)}",
+                    mode="SWING"
+                )
+                
+                for setup in active_setups:
+                    self.trading_logger.log_trading_alert(
+                        "SWING_SETUP_DETAILS",
+                        f"Setup: {setup.setup_type} | {setup.pair} | Confidence: {setup.confidence:.2f} | Strength: {setup.setup_strength:.2f}",
+                        pair=setup.pair,
+                        mode="SWING"
+                    )
+            else:
+                self.trading_logger.log_trading_alert(
+                    "SWING_SETUP_STATUS",
+                    "No active swing setups",
+                    mode="SWING"
+                )
+                
+        except Exception as e:
+            self.trading_logger.log_trading_alert(
+                "ERROR",
+                f"Error monitoring swing setups: {str(e)}",
+                mode="SWING",
+                priority="HIGH"
+            )
+    
+    def _get_signal_pattern(self, signal: SignalData, mode: str) -> str:
+        """Extract pattern from signal based on mode"""
+        if mode == "SCALPING":
+            return "Sweep/Engulfing"
+        else:  # SWING mode
+            # Check if it's from swing setup
+            active_setups = self.signal_processor.swing_setup_manager.get_active_setups(signal.pair)
+            for setup in active_setups:
+                if setup.status == "TRIGGERED":
+                    return f"Swing_{setup.setup_type}"
+            return "OTL_Breakout"
     
     def _get_volume_ratio(self, candles: list) -> float:
-        """Calculate volume ratio (placeholder)"""
+        """Calculate volume ratio"""
         if len(candles) < 10:
             return 1.0
         current_volume = candles[-1].volume
@@ -212,7 +258,7 @@ class ArifSignalApp:
         return 50.0  # Placeholder
     
     def _get_trend(self, candles: list) -> str:
-        """Determine trend (placeholder)"""
+        """Determine trend"""
         if len(candles) < 20:
             return "NEUTRAL"
         sma_20 = sum(c.close for c in candles[-20:]) / 20
