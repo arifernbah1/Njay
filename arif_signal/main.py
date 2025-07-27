@@ -22,7 +22,7 @@ class ArifSignalApp:
     def __init__(self):
         try:
             self.config = ConfigManager()
-            self.pairs = self.config.get_pairs()
+            self.pairs = ConfigManager.TIER1_PAIRS
             
             # Both modes active simultaneously
             self.scalping_active = True
