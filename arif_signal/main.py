@@ -1,7 +1,7 @@
 # main.py
 
 # --- Import classes from other files ---
-from data_manager import DataManager
+from data_ws import DataManager
 from processor import SignalProcessor
 from config import ConfigManager
 from trading_logger import TradingLogger, TradingSignal
