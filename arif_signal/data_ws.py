@@ -55,26 +55,61 @@ class DataManager:
             logging.info("Loading historical data...")
 
         if not self.exchange:
-            if self.logger: 
-                self.logger.data_logger.warning("ccxt not initialized. Simulating data loading.")
-            else: 
-                logging.warning("ccxt not initialized. Simulating data loading.")
+            # Use logger for warnings, fallback if logger is None
+            if self.logger:
+                self.logger.data_logger.warning("ccxt not initialized. Loading realistic simulated data.")
+            else:
+                logging.warning("ccxt not initialized. Loading realistic simulated data.")
             
+            # Simulate adding realistic data if ccxt failed
             for pair in ConfigManager.TIER1_PAIRS:
-                dummy_candle = CandleData(
-                    timestamp=int(time.time() * 1000), 
-                    open=100.0, 
-                    high=101.0, 
-                    low=99.0, 
-                    close=100.5, 
-                    volume=1000.0
-                )
-                for _ in range(100):
-                    self.add_candle(pair, dummy_candle)
-                if self.logger: 
+                # Generate realistic price data based on typical crypto prices
+                base_price = 100.0
+                if pair == 'BTCUSDT':
+                    base_price = 50000.0
+                elif pair == 'ETHUSDT':
+                    base_price = 3000.0
+                elif pair == 'BNBUSDT':
+                    base_price = 300.0
+                elif pair == 'SOLUSDT':
+                    base_price = 100.0
+                elif pair == 'ADAUSDT':
+                    base_price = 0.5
+                elif pair == 'AVAXUSDT':
+                    base_price = 25.0
+                elif pair == 'MATICUSDT':
+                    base_price = 0.8
+                elif pair == 'DOTUSDT':
+                    base_price = 7.0
+                
+                # Generate 100 realistic candles with some variation
+                for i in range(100):
+                    # Simulate price movement
+                    price_change = (i % 20 - 10) * 0.01  # Oscillating pattern
+                    current_price = base_price * (1 + price_change)
+                    
+                    # Create realistic candle
+                    open_price = current_price * (1 + (i % 5 - 2) * 0.005)
+                    close_price = current_price * (1 + (i % 7 - 3) * 0.005)
+                    high_price = max(open_price, close_price) * (1 + 0.01)
+                    low_price = min(open_price, close_price) * (1 - 0.01)
+                    volume = base_price * 1000 * (1 + (i % 10) * 0.1)  # Realistic volume
+                    
+                    realistic_candle = CandleData(
+                        timestamp=int(time.time() * 1000) - (100 - i) * 15 * 60 * 1000,  # 15m intervals
+                        open=open_price,
+                        high=high_price,
+                        low=low_price,
+                        close=close_price,
+                        volume=volume
+                    )
+                    self.add_candle(pair, realistic_candle)
+                
+                # Use logger for data initialization success, fallback if logger is None
+                if self.logger:
                     self.logger.log_data_initialization(pair, 100)
-                else: 
-                    logging.info("✅ {}: 100 simulated candles loaded".format(pair))
+                else:
+                    logging.info("✅ {}: 100 realistic simulated candles loaded".format(pair))
             return
 
         for pair in ConfigManager.TIER1_PAIRS:
@@ -100,25 +135,59 @@ class DataManager:
                 time.sleep(0.1)
 
             except Exception as e:
-                if self.logger: 
+                # Use logger for errors, fallback if logger is None
+                if self.logger:
                     self.logger.log_error("DataManager", "Error loading data: {}".format(e), pair=pair)
-                else: 
-                    logging.error("Error loading data for {}: {}. Simulating data for this pair.".format(pair, e))
+                else:
+                    logging.error("Error loading data for {}: {}. Loading realistic simulated data for this pair.".format(pair, e))
                 
-                dummy_candle = CandleData(
-                    timestamp=int(time.time() * 1000), 
-                    open=100.0, 
-                    high=101.0, 
-                    low=99.0, 
-                    close=100.5, 
-                    volume=1000.0
-                )
-                for _ in range(100):
-                    self.add_candle(pair, dummy_candle)
-                if self.logger: 
-                    self.logger.data_logger.info("✅ {}: 100 simulated candles loaded after error".format(pair))
-                else: 
-                    logging.info("✅ {}: 100 simulated candles loaded after error".format(pair))
+                # Generate realistic simulated data for the failed pair
+                base_price = 100.0
+                if pair == 'BTCUSDT':
+                    base_price = 50000.0
+                elif pair == 'ETHUSDT':
+                    base_price = 3000.0
+                elif pair == 'BNBUSDT':
+                    base_price = 300.0
+                elif pair == 'SOLUSDT':
+                    base_price = 100.0
+                elif pair == 'ADAUSDT':
+                    base_price = 0.5
+                elif pair == 'AVAXUSDT':
+                    base_price = 25.0
+                elif pair == 'MATICUSDT':
+                    base_price = 0.8
+                elif pair == 'DOTUSDT':
+                    base_price = 7.0
+                
+                # Generate 100 realistic candles with some variation
+                for i in range(100):
+                    # Simulate price movement
+                    price_change = (i % 20 - 10) * 0.01  # Oscillating pattern
+                    current_price = base_price * (1 + price_change)
+                    
+                    # Create realistic candle
+                    open_price = current_price * (1 + (i % 5 - 2) * 0.005)
+                    close_price = current_price * (1 + (i % 7 - 3) * 0.005)
+                    high_price = max(open_price, close_price) * (1 + 0.01)
+                    low_price = min(open_price, close_price) * (1 - 0.01)
+                    volume = base_price * 1000 * (1 + (i % 10) * 0.1)  # Realistic volume
+                    
+                    realistic_candle = CandleData(
+                        timestamp=int(time.time() * 1000) - (100 - i) * 15 * 60 * 1000,  # 15m intervals
+                        open=open_price,
+                        high=high_price,
+                        low=low_price,
+                        close=close_price,
+                        volume=volume
+                    )
+                    self.add_candle(pair, realistic_candle)
+                
+                # Use logger for simulated data loading after error, fallback if logger is None
+                if self.logger:
+                    self.logger.data_logger.info("✅ {}: 100 realistic simulated candles loaded after error".format(pair))
+                else:
+                    logging.info("✅ {}: 100 realistic simulated candles loaded after error".format(pair))
 
 
 # ========== WEBSOCKET MANAGER ==========

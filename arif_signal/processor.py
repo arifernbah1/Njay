@@ -27,7 +27,49 @@ class SignalProcessor:
     def calculate_strength(self, candles: List[CandleData], pair: str) -> float:
         """Calculate signal strength score"""
         if len(candles) < 30:
-            return 2.0
+            # Instead of returning 2.0, calculate with available data
+            if len(candles) < 10:
+                return 1.0  # Very low strength if insufficient data
+            
+            # Use available data for calculation
+            available_candles = candles[-min(30, len(candles)):]
+            current = available_candles[-1]
+            config = ConfigManager.get_config(pair)
+            strength_score = 0.0
+            
+            # Volume strength (max 2.0) - use available data
+            volumes = [c.volume for c in available_candles[-min(10, len(available_candles)):]]
+            avg_vol = sum(volumes) / len(volumes) if len(volumes) > 0 else 0
+            vol_ratio = current.volume / avg_vol if avg_vol > 0 else 1
+            
+            if vol_ratio >= 3.0:
+                strength_score += 2.0
+            elif vol_ratio >= 2.0:
+                strength_score += 1.5
+            elif vol_ratio >= 1.5:
+                strength_score += 1.0
+            else:
+                strength_score += 0.5
+            
+            # RSI position (max 1.0) - use available data
+            closes = [c.close for c in available_candles[-min(20, len(available_candles)):]]
+            rsi = self.analyzer.calculate_rsi(closes)
+            
+            if config.rsi_oversold <= rsi <= config.rsi_overbought:
+                strength_score += 1.0
+            else:
+                strength_score += 0.3
+            
+            # Time bonus (max 0.5)
+            if TimeUtils.is_good_trading_time():
+                strength_score += 0.5
+            else:
+                strength_score += 0.1
+            
+            # Base score - reduced for insufficient data
+            strength_score += 1.0  # Reduced from 1.5
+            
+            return min(strength_score, 5.0)  # Reduced max from 6.5
 
         current = candles[-1]
         config = ConfigManager.get_config(pair)

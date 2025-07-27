@@ -26,18 +26,34 @@ class TechnicalAnalyzer:
     def calculate_rsi(prices: List[float], period: int = 14) -> float:
         """Calculate RSI indicator"""
         if len(prices) < period + 1:
-            return 50.0
-
+            # Instead of returning 50.0, calculate with available data
+            if len(prices) < 2:
+                return 50.0  # Only if absolutely no data
+            
+            # Use available data with shorter period
+            available_period = min(period, len(prices) - 1)
+            if available_period < 2:
+                return 50.0
+            
+            deltas = np.diff(prices[-available_period-1:])
+            gains = np.where(deltas > 0, deltas, 0)
+            losses = np.where(deltas < 0, -deltas, 0)
+            avg_gain = np.mean(gains)
+            avg_loss = np.mean(losses)
+            
+            if avg_loss == 0:
+                return 100.0
+            rs = avg_gain / avg_loss
+            return 100 - (100 / (1 + rs))
+        
         deltas = np.diff(prices[-period-1:])
         gains = np.where(deltas > 0, deltas, 0)
         losses = np.where(deltas < 0, -deltas, 0)
-
         avg_gain = np.mean(gains)
         avg_loss = np.mean(losses)
-
+        
         if avg_loss == 0:
             return 100.0
-
         rs = avg_gain / avg_loss
         return 100 - (100 / (1 + rs))
 
