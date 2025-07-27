@@ -1,201 +1,63 @@
 # main.py
 
 # --- Import classes from other files ---
-from trading_logger import TradingLogger
-from models import CandleData, TradingConfig, SignalData, SignalType
-from utils import TimeUtils
-from analysis import TechnicalAnalyzer, PatternDetector
-from processor import SignalProcessor
-from notifications import NotificationService
-from data_ws import DataManager, WebSocketManager
-from config import ConfigManager
-
-import logging
-import sys
-import threading
+from arif_signal.data_manager import DataManager
+from arif_signal.processor import SignalProcessor
+from arif_signal.config import ConfigManager
+from arif_signal.trading_logger import TradingLogger, TradingSignal
+from arif_signal.models import SignalData, SignalType
+from datetime import datetime
 import time
-from collections import defaultdict, deque
-try:
-    import colorama
-except ImportError:
-    colorama = None
+import sys
 
-from datetime import datetime, timedelta
-
-try:
-    import numpy as np
-except ImportError:
-    print("❌ numpy is required. Please install: pip install numpy")
-    sys.exit(1)
-
-try:
-    import requests
-except ImportError:
-    print("❌ requests is required. Please install: pip install requests")
-    sys.exit(1)
-
-import json
-import ssl
-from typing import List, Optional, Tuple
-from pathlib import Path
-
-# ========== MAIN APPLICATION ==========
-class TradingBot:
-    """Main trading bot application with dual mode support"""
+class ArifSignalApp:
+    """Main application class with Trading Logger integration"""
+    
     def __init__(self):
-        # Initialize enhanced logger first
-        # This assumes TradingLogger is imported from trading_logger.py
-        self.logger = TradingLogger(log_level=ConfigManager.LOG_LEVEL)
+        self.config = ConfigManager()
+        self.pairs = self.config.get_pairs()
+        self.current_mode = "SCALPING"  # Default mode
         
-        # Initialize components, passing the logger instance
-        # These assume the classes are imported from their respective files.
-        # For example, DataManager is imported from data_ws.py
-        self.data_manager = DataManager(logger=self.logger)
-        self.analyzer = TechnicalAnalyzer(logger=self.logger)  # Pass logger to analyzer
-        self.detector = PatternDetector(self.analyzer, logger=self.logger)  # Pass logger to detector
-        self.signal_processor = SignalProcessor(
-            self.analyzer, self.detector, self.logger  # Pass logger to processor
+        # Initialize specialized Trading Logger
+        self.trading_logger = TradingLogger("trading_logs")
+        
+        # Initialize components with trading logger
+        self.data_manager = DataManager(self.trading_logger)
+        self.signal_processor = SignalProcessor(self.trading_logger)
+        
+        # Log system startup
+        self.trading_logger.log_trading_alert(
+            "SYSTEM_START", 
+            "Arif Signal Trading System initialized",
+            priority="HIGH"
         )
-        self.notification_service = NotificationService(logger=self.logger)  # Pass logger to notification service
-        self.websocket_manager = WebSocketManager(
-            self.data_manager, self.signal_processor, self.notification_service, logger=self.logger  # Pass logger to websocket manager
-        )
-
-    def start(self):
-        """Start the trading bot with dual mode"""
-        try:
-            # Log bot startup using the logger with dual mode info
-            self.logger.log_bot_start(
-                ConfigManager.TIER1_PAIRS, 
-                "DUAL MODE (15m + 1h)",
-                dual_mode=True
-            )
-            
-            # Initialize data (logging is handled within DataManager's initialize_data)
-            self.data_manager.initialize_data()
-            
-            # Start WebSocket (logging is handled within WebSocketManager)
-            # The WebSocketManager.start() method itself logs connection status
-            self.websocket_manager.start()
-            
-            # The main thread will stay alive as long as the WebSocket thread is running
-            # In a real application, you might use a more robust way to keep the main thread alive
-            # or manage the lifecycle of the WebSocket thread.
-            # For a simple script, a loop or just letting the WebSocket thread keep it alive is common.
-            # You might add a loop here if the WebSocket thread doesn't keep the main thread alive
-            # or if you need to perform other tasks in the main thread.
-            # Example:
-            # while self.websocket_manager.is_running:
-            #     time.sleep(1)
-            
-        except KeyboardInterrupt:
-            self.logger.main_logger.info("Bot stopped by user")  # Use logger
-        except Exception as e:
-            self.logger.log_error("MAIN", "Bot error: {}".format(e))  # Use logger
-            self.stop()
-
-    def _send_start_notification(self):
-        """Send Telegram notification when bot starts"""
-        try:
-            # Create start message
-            start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
-            session = TimeUtils.get_trading_session()
-            
-            message = """
-🤖 <b>ARIF SIGNAL BOT - STARTED</b>
-
-✅ <b>Status:</b> Bot successfully started
-🕐 <b>Start Time:</b> {}
-📊 <b>Timeframe:</b> {}
-🕐 <b>Session:</b> {}
-
-💎 <b>Trading Pairs ({}):</b>
-{}
-
-💰 <b>Configuration:</b>
-• Min Volume: ${:,}
-• Cooldown: {} minutes
-• Max Daily Signals: 1-2 per pair
-
-🎯 <b>Strategy:</b> Conservative Development Mode
-📱 <b>Notifications:</b> Active
-🔗 <b>WebSocket:</b> Connecting...
-
-<i>Bot is now monitoring for high-quality trading signals...</i>
-            """.format(
-                start_time, ConfigManager.TIMEFRAME, session,
-                len(ConfigManager.TIER1_PAIRS), ', '.join(ConfigManager.TIER1_PAIRS),
-                ConfigManager.MIN_VOLUME_USDT, ConfigManager.SIGNAL_COOLDOWN_MINUTES
-            ).strip()
-
-            # Send notification
-            success = self.notification_service._send_telegram(message, "BOT_START")
-            
-            if success:
-                self.logger.main_logger.info("✅ Start notification sent to Telegram")
-            else:
-                self.logger.main_logger.warning("⚠️ Failed to send start notification to Telegram")
-                
-        except Exception as e:
-            self.logger.log_error("MAIN", "Error sending start notification: {}".format(e))
-
-    def stop(self):
-        """Stop the trading bot"""
-        self.logger.main_logger.info("Stopping trading bot...")  # Use logger
-        self.websocket_manager.stop()
-        self.logger.log_session_stats()
-
-    def _send_stop_notification(self):
-        """Send Telegram notification when bot stops"""
-        try:
-            stop_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
-            
-            message = """
-🛑 <b>ARIF SIGNAL BOT - STOPPED</b>
-
-❌ <b>Status:</b> Bot stopped
-🕐 <b>Stop Time:</b> {}
-
-📊 <b>Session Summary:</b>
-• Check logs for detailed statistics
-• Review signal performance
-• Restart when ready
-
-<i>Bot has been safely stopped.</i>
-            """.format(stop_time).strip()
-
-            # Send notification
-            success = self.notification_service._send_telegram(message, "BOT_STOP")
-            
-            if success:
-                self.logger.main_logger.info("✅ Stop notification sent to Telegram")
-            else:
-                self.logger.main_logger.warning("⚠️ Failed to send stop notification to Telegram")
-                
-        except Exception as e:
-            self.logger.log_error("MAIN", "Error sending stop notification: {}".format(e))
-
+    
     def run(self):
-        """Main application loop with mode-specific logging"""
-        self.logger.log_info("MainApp", "Starting Arif Signal System", mode="SYSTEM")
-        
-        # Log initial mode
-        self.logger.log_mode_switch("INIT", self.current_mode, "System startup")
+        """Main application loop with Trading Logger integration"""
+        self.trading_logger.log_trading_alert(
+            "SYSTEM_START", 
+            f"Starting Arif Signal System in {self.current_mode} mode",
+            priority="HIGH"
+        )
         
         while True:
             try:
                 # Check for mode switch
                 new_mode = self.check_mode_switch()
                 if new_mode and new_mode != self.current_mode:
-                    self.logger.log_mode_switch(self.current_mode, new_mode, "Market condition change")
+                    self.trading_logger.log_trading_alert(
+                        "MODE_SWITCH",
+                        f"Switching from {self.current_mode} to {new_mode}",
+                        priority="MEDIUM"
+                    )
                     self.current_mode = new_mode
                 
                 # Process signals for current mode
                 signals = self.process_signals_for_mode(self.current_mode)
                 
-                # Log mode performance
+                # Log performance summary
                 if signals:
-                    self.log_mode_performance()
+                    self.trading_logger.log_performance_summary(self.current_mode)
                 
                 # Sleep based on mode
                 if self.current_mode == "SCALPING":
@@ -204,10 +66,18 @@ class TradingBot:
                     time.sleep(60)  # 1 minute for swing
                     
             except KeyboardInterrupt:
-                self.logger.log_info("MainApp", "Shutting down gracefully", mode="SYSTEM")
+                self.trading_logger.log_trading_alert(
+                    "SYSTEM_SHUTDOWN",
+                    "Shutting down gracefully",
+                    priority="HIGH"
+                )
                 break
             except Exception as e:
-                self.logger.log_error("MainApp", f"Error in main loop: {str(e)}", mode="SYSTEM")
+                self.trading_logger.log_trading_alert(
+                    "ERROR",
+                    f"Error in main loop: {str(e)}",
+                    priority="CRITICAL"
+                )
                 time.sleep(30)
     
     def check_mode_switch(self) -> str:
@@ -223,15 +93,23 @@ class TradingBot:
                 return "SWING"
                 
         except Exception as e:
-            self.logger.log_error("MainApp", f"Error checking mode switch: {str(e)}", mode="SYSTEM")
+            self.trading_logger.log_trading_alert(
+                "ERROR",
+                f"Error checking mode switch: {str(e)}",
+                priority="HIGH"
+            )
             return self.current_mode
     
-    def process_signals_for_mode(self, mode: str) -> List[SignalData]:
-        """Process signals for specific mode with mode-specific logging"""
+    def process_signals_for_mode(self, mode: str) -> list:
+        """Process signals for specific mode with Trading Logger"""
         signals = []
         
         try:
-            self.logger.log_info("MainApp", f"Processing signals for {mode} mode", mode=mode)
+            self.trading_logger.log_trading_alert(
+                "PROCESSING",
+                f"Processing signals for {mode} mode",
+                mode=mode
+            )
             
             for pair in self.pairs:
                 try:
@@ -242,53 +120,120 @@ class TradingBot:
                         candles = self.data_manager.get_candles(pair, "1h", 200)
                     
                     if not candles:
-                        self.logger.log_error("MainApp", f"No candles for {pair}", pair=pair, mode=mode)
+                        self.trading_logger.log_trading_alert(
+                            "DATA_ERROR",
+                            f"No candles for {pair}",
+                            pair=pair,
+                            mode=mode
+                        )
                         continue
                     
-                    # Process signal with mode-specific logging
+                    # Process signal with Trading Logger
                     signal = self.signal_processor.process_signal(candles, pair, mode)
                     
                     if signal:
+                        # Convert to TradingSignal format
+                        trading_signal = TradingSignal(
+                            pair=signal.pair,
+                            direction=signal.direction,
+                            entry_price=signal.entry_price,
+                            stop_loss=signal.stop_loss,
+                            take_profit=signal.take_profit,
+                            strength=signal.strength,
+                            risk_reward=signal.risk_reward,
+                            mode=mode,
+                            timestamp=signal.timestamp,
+                            pattern=self._get_signal_pattern(signal),
+                            volume_ratio=self._get_volume_ratio(candles),
+                            rsi=self._get_rsi(candles),
+                            trend=self._get_trend(candles)
+                        )
+                        
+                        # Log with Trading Logger
+                        self.trading_logger.log_trading_signal(trading_signal)
+                        
                         signals.append(signal)
-                        self.logger.log_info("MainApp", f"Signal generated for {pair}", pair=pair, mode=mode)
+                        
+                        self.trading_logger.log_trading_alert(
+                            "SIGNAL_GENERATED",
+                            f"Signal generated for {pair}",
+                            pair=pair,
+                            mode=mode
+                        )
                     
                 except Exception as e:
-                    self.logger.log_error("MainApp", f"Error processing {pair}: {str(e)}", pair=pair, mode=mode)
+                    self.trading_logger.log_trading_alert(
+                        "ERROR",
+                        f"Error processing {pair}: {str(e)}",
+                        pair=pair,
+                        mode=mode,
+                        priority="HIGH"
+                    )
                     continue
             
             # Log mode summary
             if signals:
-                self.logger.log_info("MainApp", f"Generated {len(signals)} signals for {mode} mode", mode=mode)
+                self.trading_logger.log_trading_alert(
+                    "SUMMARY",
+                    f"Generated {len(signals)} signals for {mode} mode",
+                    mode=mode
+                )
             else:
-                self.logger.log_info("MainApp", f"No signals generated for {mode} mode", mode=mode)
+                self.trading_logger.log_trading_alert(
+                    "SUMMARY",
+                    f"No signals generated for {mode} mode",
+                    mode=mode
+                )
                 
         except Exception as e:
-            self.logger.log_error("MainApp", f"Error in process_signals_for_mode: {str(e)}", mode=mode)
+            self.trading_logger.log_trading_alert(
+                "ERROR",
+                f"Error in process_signals_for_mode: {str(e)}",
+                mode=mode,
+                priority="CRITICAL"
+            )
         
         return signals
     
-    def log_mode_performance(self):
-        """Log performance statistics for current mode"""
-        try:
-            # Calculate basic stats (can be enhanced with actual performance tracking)
-            stats = {
-                'total_signals': len(self.signal_processor.daily_signal_count_scalping) if self.current_mode == "SCALPING" else len(self.signal_processor.daily_signal_count_swing),
-                'win_rate': 0.65,  # Placeholder
-                'avg_risk_reward': 2.1,  # Placeholder
-                'total_pnl': 0.0  # Placeholder
-            }
-            
-            self.logger.log_mode_performance(self.current_mode, stats)
-            
-        except Exception as e:
-            self.logger.log_error("MainApp", f"Error logging mode performance: {str(e)}", mode=self.current_mode)
-
+    def _get_signal_pattern(self, signal: SignalData) -> str:
+        """Extract pattern from signal (placeholder)"""
+        return "Sweep"  # Placeholder
+    
+    def _get_volume_ratio(self, candles: list) -> float:
+        """Calculate volume ratio (placeholder)"""
+        if len(candles) < 10:
+            return 1.0
+        current_volume = candles[-1].volume
+        avg_volume = sum(c.volume for c in candles[-10:]) / 10
+        return current_volume / avg_volume if avg_volume > 0 else 1.0
+    
+    def _get_rsi(self, candles: list) -> float:
+        """Calculate RSI (placeholder)"""
+        return 50.0  # Placeholder
+    
+    def _get_trend(self, candles: list) -> str:
+        """Determine trend (placeholder)"""
+        if len(candles) < 20:
+            return "NEUTRAL"
+        sma_20 = sum(c.close for c in candles[-20:]) / 20
+        current_price = candles[-1].close
+        return "BULLISH" if current_price > sma_20 else "BEARISH"
 
 # ========== ENTRY POINT ==========
 if __name__ == '__main__':
-    print("🤖 Starting Arif Signal Trading Bot...")
-    print("=" * 50)
+    print("🤖 Starting Arif Signal Trading Bot with Trading Logger...")
+    print("=" * 60)
+    print("📊 Trading Logger: Specialized logging for trading analysis")
+    print("⚡ Mode: Dual Mode (Scalping + Swing)")
+    print("📁 Logs: trading_logs/ directory")
+    print("=" * 60)
     
-    # Instantiate and start the bot
-    bot = TradingBot()
-    bot.start()
+    try:
+        # Instantiate and run the app
+        app = ArifSignalApp()
+        app.run()
+    except KeyboardInterrupt:
+        print("\n🛑 Bot stopped by user")
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        sys.exit(1)

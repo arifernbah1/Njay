@@ -139,107 +139,77 @@ class SignalProcessor:
             else:
                 return 2.0, entry_price * 0.97, entry_price * 1.06
 
-    def process_signal(self, pair: str, candle: CandleData, candle_history: List[CandleData], mode: str = "SCALPING") -> Optional[SignalData]:
-        """Main signal processing method for specific mode"""
-        with self.processing_lock:
-            entry_price = candle.close
-            mode_config = ConfigManager.get_mode_config(mode)
+    def process_signal(self, candles: List[CandleData], pair: str, mode: str = "SCALPING") -> Optional[SignalData]:
+        """Process signal with Trading Logger integration"""
+        if not candles or len(candles) < 20:
+            return None
+        
+        try:
+            current = candles[-1]
+            entry_price = current.close
+            today = datetime.now().strftime("%Y%m%d")
             
-            # Log the start of the analysis process for this candle
-            self.logger.log_signal_analysis_start(pair, entry_price)
+            # Get mode-specific configuration
+            mode_config = self.get_mode_config(mode)
             
-            # Mode-specific time filter
-            if mode == "SCALPING" and not TimeUtils.is_good_trading_time():
-                session = TimeUtils.get_trading_session()
-                self.logger.log_filter_result(
-                    pair, "Time Filter", False, "Bad session for Scalping: {}".format(session)
+            # Cooldown check with Trading Logger
+            if not self.check_cooldown(pair, mode):
+                self.trading_logger.log_trading_alert(
+                    "COOLDOWN",
+                    f"Cooldown active for {pair}",
+                    pair=pair,
+                    mode=mode
                 )
-                self.logger.log_signal_filtered(pair, "Outside good trading hours for Scalping", {
-                    "Session": session,
-                    "Current Time": TimeUtils.get_wib_time_string(),
-                    "Mode": mode
-                })
                 return None
             
-            # Swing mode doesn't have session restrictions - it runs 24/7
-            if mode == "SCALPING":
-                self.logger.log_filter_result(pair, "Time Filter", True, "Good trading session for {}".format(mode))
-            else:
-                self.logger.log_filter_result(pair, "Time Filter", True, "Swing mode - no session restrictions")
-            
-            # Mode-specific daily limit check
-            today = datetime.utcnow().date()
-            if mode == "SCALPING":
-                current_signals = self.daily_signal_count_scalping["{}_{}".format(pair, today)]
-            else:
-                current_signals = self.daily_signal_count_swing["{}_{}".format(pair, today)]
-                
-            if current_signals >= mode_config['max_daily_signals']:
-                self.logger.log_filter_result(
-                    pair, "Daily Limit", False, "{}/{} {} signals today".format(current_signals, mode_config['max_daily_signals'], mode)
-                )
-                self.logger.log_signal_filtered(pair, "Daily signal limit reached for {}".format(mode), {
-                    "Count Today": current_signals,
-                    "Max Daily": mode_config['max_daily_signals'],
-                    "Mode": mode
-                })
-                return None
-            
-            self.logger.log_filter_result(pair, "Daily Limit", True, "{}/{} {} signals today".format(current_signals, mode_config['max_daily_signals'], mode))
-            
-            # Mode-specific cooldown check
-            if mode == "SCALPING":
-                last_signal_time = self.last_signals_scalping.get(pair)
-            else:
-                last_signal_time = self.last_signals_swing.get(pair)
-                
-            if last_signal_time:
-                time_diff = (datetime.utcnow() - last_signal_time).total_seconds() / 60
-                if time_diff < mode_config['signal_cooldown']:
-                    self.logger.log_filter_result(
-                        pair, "Cooldown", False, "{} minutes since last {} signal".format(time_diff, mode)
-                    )
-                    self.logger.log_signal_filtered(pair, "Cooldown period for {}".format(mode), {
-                        "Time Since Last": "{} minutes".format(time_diff),
-                        "Required Cooldown": "{} minutes".format(mode_config['signal_cooldown']),
-                        "Mode": mode
-                    })
-                    return None
-            
-            self.logger.log_filter_result(pair, "Cooldown", True, "Ready for {} signal".format(mode))
-            
-            # Technical analysis with mode-specific logging
+            # Technical analysis with Trading Logger
             if mode == "SCALPING":
                 ta_data = self.detector.analyze_scalping_15m(candles, pair)
             else:  # SWING mode
                 ta_data = self.detector.analyze_swing_1h(candles, pair)
             
-            # Log technical analysis results
-            self.logger.log_technical_analysis(pair, ta_data, mode)
+            # Log market analysis with Trading Logger
+            self.trading_logger.log_market_analysis(pair, ta_data, mode)
             
-            # Volume filter with mode-specific logging
+            # Volume filter with Trading Logger
             if mode == "SCALPING":
                 volume_ratio = ta_data.get('volume_ratio', 1)
                 volume_passed = volume_ratio >= mode_config['volume_threshold']
-                self.logger.log_filter_result(pair, "Volume", volume_passed, 
-                    "Volume ratio {:.2f} >= {:.2f} threshold".format(volume_ratio, mode_config['volume_threshold']), mode)
+                
+                if not volume_passed:
+                    self.trading_logger.log_trading_alert(
+                        "FILTER_FAILED",
+                        f"Volume ratio {volume_ratio:.2f} < {mode_config['volume_threshold']} threshold",
+                        pair=pair,
+                        mode=mode
+                    )
+                    return None
             else:  # SWING mode
                 mfi = ta_data.get('volume_analysis', {}).get('mfi', 50)
                 volume_passed = mfi >= 50  # MFI threshold for swing
-                self.logger.log_filter_result(pair, "MFI", volume_passed, 
-                    "MFI {:.2f} >= 50 threshold".format(mfi), mode)
+                
+                if not volume_passed:
+                    self.trading_logger.log_trading_alert(
+                        "FILTER_FAILED",
+                        f"MFI {mfi:.2f} < 50 threshold",
+                        pair=pair,
+                        mode=mode
+                    )
+                    return None
             
-            if not volume_passed:
-                return None
-            
-            # Pattern detection with mode-specific sensitivity
+            # Pattern detection with Trading Logger
             if mode == "SCALPING":
                 sweep_detected, sweep_direction = self.detector.detect_sweep(candles, pair, "SCALPING")
             else:  # SWING mode
                 sweep_detected, sweep_direction = self.detector.detect_sweep(candles, pair, "SWING")
             
             if sweep_detected:
-                self.logger.log_pattern_detection(pair, "Sweep", True, {"Direction": sweep_direction, "Mode": mode}, mode)
+                # Log pattern detection with Trading Logger
+                self.trading_logger.log_pattern_detection(
+                    pair, "Sweep", True, 
+                    {"Direction": sweep_direction, "Mode": mode}, 
+                    mode, confidence=0.85
+                )
                 
                 # Calculate strength and risk/reward
                 strength = self.calculate_strength(candles, pair, mode)
@@ -267,21 +237,35 @@ class SignalProcessor:
                         self.daily_signal_count_swing["{}_{}".format(pair, today)] += 1
                         self.last_signals_swing[pair] = datetime.utcnow()
                     
-                    self.logger.log_signal_generated(signal.__dict__, mode)
+                    # Log risk management with Trading Logger
+                    self.trading_logger.log_risk_management(
+                        pair, "ENTRY", {
+                            "entry_price": entry_price,
+                            "stop_loss": stop_loss,
+                            "take_profit": take_profit,
+                            "risk_reward": rr_ratio,
+                            "strength": strength
+                        }, mode
+                    )
+                    
                     return signal
                 else:
-                    self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                        "Strength": strength,
-                        "Required Strength": mode_config['min_strength'],
-                        "R:R": rr_ratio,
-                        "Required R:R": mode_config['min_risk_reward'],
-                        "Mode": mode
-                    }, mode)
+                    self.trading_logger.log_trading_alert(
+                        "FILTER_FAILED",
+                        f"Strength/R:R insufficient - Strength: {strength:.2f}, R:R: {rr_ratio:.2f}",
+                        pair=pair,
+                        mode=mode
+                    )
             
             # Check for engulfing patterns (only for scalping mode)
             if mode == "SCALPING":
                 if sweep_direction == SignalType.BULLISH and self.detector.detect_engulfing(candles, SignalType.BULLISH):
-                    self.logger.log_pattern_detection(pair, "Bullish Engulfing", True, {"Mode": mode}, mode)
+                    # Log pattern detection with Trading Logger
+                    self.trading_logger.log_pattern_detection(
+                        pair, "Bullish Engulfing", True, 
+                        {"Mode": mode}, 
+                        mode, confidence=0.80
+                    )
                     
                     # Calculate strength and risk/reward
                     strength = self.calculate_strength(candles, pair, mode)
@@ -305,19 +289,33 @@ class SignalProcessor:
                         self.daily_signal_count_scalping["{}_{}".format(pair, today)] += 1
                         self.last_signals_scalping[pair] = datetime.utcnow()
                         
-                        self.logger.log_signal_generated(signal.__dict__, mode)
+                        # Log risk management with Trading Logger
+                        self.trading_logger.log_risk_management(
+                            pair, "ENTRY", {
+                                "entry_price": entry_price,
+                                "stop_loss": stop_loss,
+                                "take_profit": take_profit,
+                                "risk_reward": rr_ratio,
+                                "strength": strength
+                            }, mode
+                        )
+                        
                         return signal
                     else:
-                        self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                            "Strength": strength,
-                            "Required Strength": mode_config['min_strength'],
-                            "R:R": rr_ratio,
-                            "Required R:R": mode_config['min_risk_reward'],
-                            "Mode": mode
-                        }, mode)
+                        self.trading_logger.log_trading_alert(
+                            "FILTER_FAILED",
+                            f"Strength/R:R insufficient - Strength: {strength:.2f}, R:R: {rr_ratio:.2f}",
+                            pair=pair,
+                            mode=mode
+                        )
                 
                 elif sweep_direction == SignalType.BEARISH and self.detector.detect_engulfing(candles, SignalType.BEARISH):
-                    self.logger.log_pattern_detection(pair, "Bearish Engulfing", True, {"Mode": mode}, mode)
+                    # Log pattern detection with Trading Logger
+                    self.trading_logger.log_pattern_detection(
+                        pair, "Bearish Engulfing", True, 
+                        {"Mode": mode}, 
+                        mode, confidence=0.80
+                    )
                     
                     # Calculate strength and risk/reward
                     strength = self.calculate_strength(candles, pair, mode)
@@ -341,22 +339,36 @@ class SignalProcessor:
                         self.daily_signal_count_scalping["{}_{}".format(pair, today)] += 1
                         self.last_signals_scalping[pair] = datetime.utcnow()
                         
-                        self.logger.log_signal_generated(signal.__dict__, mode)
+                        # Log risk management with Trading Logger
+                        self.trading_logger.log_risk_management(
+                            pair, "ENTRY", {
+                                "entry_price": entry_price,
+                                "stop_loss": stop_loss,
+                                "take_profit": take_profit,
+                                "risk_reward": rr_ratio,
+                                "strength": strength
+                            }, mode
+                        )
+                        
                         return signal
                     else:
-                        self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                            "Strength": strength,
-                            "Required Strength": mode_config['min_strength'],
-                            "R:R": rr_ratio,
-                            "Required R:R": mode_config['min_risk_reward'],
-                            "Mode": mode
-                        }, mode)
+                        self.trading_logger.log_trading_alert(
+                            "FILTER_FAILED",
+                            f"Strength/R:R insufficient - Strength: {strength:.2f}, R:R: {rr_ratio:.2f}",
+                            pair=pair,
+                            mode=mode
+                        )
             
             # Swing Trading OTL Pattern Detection (for SWING mode only)
             if mode == "SWING":
                 otl_breakout = self.detector.detect_otl_breakout(candles, pair)
                 if otl_breakout:
-                    self.logger.log_pattern_detection(pair, "OTL Breakout", True, {"Mode": mode}, mode)
+                    # Log pattern detection with Trading Logger
+                    self.trading_logger.log_pattern_detection(
+                        pair, "OTL Breakout", True, 
+                        {"Mode": mode}, 
+                        mode, confidence=0.90
+                    )
                     
                     # Calculate strength and risk/reward
                     strength = self.calculate_strength(candles, pair, mode)
@@ -380,20 +392,44 @@ class SignalProcessor:
                         self.daily_signal_count_swing["{}_{}".format(pair, today)] += 1
                         self.last_signals_swing[pair] = datetime.utcnow()
                         
-                        self.logger.log_signal_generated(signal.__dict__, mode)
+                        # Log risk management with Trading Logger
+                        self.trading_logger.log_risk_management(
+                            pair, "ENTRY", {
+                                "entry_price": entry_price,
+                                "stop_loss": stop_loss,
+                                "take_profit": take_profit,
+                                "risk_reward": rr_ratio,
+                                "strength": strength
+                            }, mode
+                        )
+                        
                         return signal
                     else:
-                        self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                            "Strength": strength,
-                            "Required Strength": mode_config['min_strength'],
-                            "R:R": rr_ratio,
-                            "Required R:R": mode_config['min_risk_reward'],
-                            "Mode": mode
-                        }, mode)
+                        self.trading_logger.log_trading_alert(
+                            "FILTER_FAILED",
+                            f"Strength/R:R insufficient - Strength: {strength:.2f}, R:R: {rr_ratio:.2f}",
+                            pair=pair,
+                            mode=mode
+                        )
             
             # No pattern detected
-            self.logger.log_signal_filtered(pair, "No pattern detected for {}".format(mode), {"Mode": mode})
-            return None
+            self.trading_logger.log_trading_alert(
+                "NO_PATTERN",
+                f"No pattern detected for {pair}",
+                pair=pair,
+                mode=mode
+            )
+            
+        except Exception as e:
+            self.trading_logger.log_trading_alert(
+                "ERROR",
+                f"Error processing signal for {pair}: {str(e)}",
+                pair=pair,
+                mode=mode,
+                priority="CRITICAL"
+            )
+        
+        return None
 
     def calculate_otl_strength(self, candles: List[CandleData], pair: str, otl_data: Dict) -> float:
         """Calculate strength specifically for OTL signals"""
