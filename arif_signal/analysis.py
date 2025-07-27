@@ -189,46 +189,51 @@ class PatternDetector:
 
     def _get_higher_timeframe_trend(self, pair: str) -> str:
         """Get higher timeframe trend - real implementation"""
-        # Get exchange from TechnicalAnalyzer
-        if not hasattr(self.analyzer, 'exchange'):
-            # Try to get exchange from data_manager if available
-            if hasattr(self.analyzer, 'data_manager') and hasattr(self.analyzer.data_manager, 'exchange'):
-                exchange = self.analyzer.data_manager.exchange
+        try:
+            # Get exchange from TechnicalAnalyzer
+            if not hasattr(self.analyzer, 'exchange'):
+                # Try to get exchange from data_manager if available
+                if hasattr(self.analyzer, 'data_manager') and hasattr(self.analyzer.data_manager, 'exchange'):
+                    exchange = self.analyzer.data_manager.exchange
+                else:
+                    if self.logger: self.logger.pattern_logger.debug("   🔍 {}: No exchange available, using NEUTRAL".format(pair))
+                    return "NEUTRAL"
             else:
-                if self.logger: self.logger.pattern_logger.debug("   🔍 {}: No exchange available".format(pair))
-                raise Exception("No exchange available for multi-timeframe analysis")
-        else:
-            exchange = self.analyzer.exchange
-        
-        if not exchange:
-            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Exchange not initialized".format(pair))
-            raise Exception("Exchange not initialized for multi-timeframe analysis")
-        
-        # Convert pair format for ccxt
-        ccxt_pair = pair.replace('USDT', '/USDT')
-        
-        # Fetch 1H data
-        ohlcv_1h = exchange.fetch_ohlcv(ccxt_pair, '1h', limit=50)
-        # Fetch 4H data  
-        ohlcv_4h = exchange.fetch_ohlcv(ccxt_pair, '4h', limit=50)
-        
-        if len(ohlcv_1h) < 20 or len(ohlcv_4h) < 20:
-            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Insufficient HTF data".format(pair))
-            raise Exception("Insufficient higher timeframe data")
-        
-        # Calculate trends
-        trend_1h = self._calculate_trend(ohlcv_1h)
-        trend_4h = self._calculate_trend(ohlcv_4h)
-        
-        if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trends - 1H: {}, 4H: {}".format(pair, trend_1h, trend_4h))
-        
-        # Combine analysis
-        if trend_4h == "BULLISH" and trend_1h == "BULLISH":
-            return "BULLISH"
-        elif trend_4h == "BEARISH" and trend_1h == "BEARISH":
-            return "BEARISH"
-        else:
-            return "NEUTRAL"
+                exchange = self.analyzer.exchange
+            
+            if not exchange:
+                if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Exchange not initialized, using NEUTRAL".format(pair))
+                return "NEUTRAL"
+            
+            # Convert pair format for ccxt
+            ccxt_pair = pair.replace('USDT', '/USDT')
+            
+            # Fetch 1H data
+            ohlcv_1h = exchange.fetch_ohlcv(ccxt_pair, '1h', limit=50)
+            # Fetch 4H data  
+            ohlcv_4h = exchange.fetch_ohlcv(ccxt_pair, '4h', limit=50)
+            
+            if len(ohlcv_1h) < 20 or len(ohlcv_4h) < 20:
+                if self.logger: self.logger.pattern_logger.debug("   🔍 {}: Insufficient HTF data, using NEUTRAL".format(pair))
+                return "NEUTRAL"
+            
+            # Calculate trends
+            trend_1h = self._calculate_trend(ohlcv_1h)
+            trend_4h = self._calculate_trend(ohlcv_4h)
+            
+            if self.logger: self.logger.pattern_logger.debug("   🔍 {}: HTF Trends - 1H: {}, 4H: {}".format(pair, trend_1h, trend_4h))
+            
+            # Combine analysis
+            if trend_4h == "BULLISH" and trend_1h == "BULLISH":
+                return "BULLISH"
+            elif trend_4h == "BEARISH" and trend_1h == "BEARISH":
+                return "BEARISH"
+            else:
+                return "NEUTRAL"
+                
+        except Exception as e:
+            if self.logger: self.logger.log_error("PatternDetector", "Error fetching higher timeframe trend for {}: {}".format(pair, e), pair=pair)
+            return "NEUTRAL"  # Return NEUTRAL on error
     
     def _calculate_trend(self, ohlcv_data):
         """Calculate trend from OHLCV data"""
