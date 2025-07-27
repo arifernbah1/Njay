@@ -346,9 +346,6 @@ class BotHealthMonitor:
                 component = self.components[component_name]
                 component.last_check = current_time
                 
-                # Simulate response time check (in real implementation, this would check actual response times)
-                component.response_time_ms = 100.0  # Placeholder
-                
                 # Check if component is responding (simplified check)
                 if component.error_count > 10:
                     component.status = ComponentStatus.ERROR
