@@ -175,6 +175,114 @@ class TradingBot:
         except Exception as e:
             self.logger.log_error("MAIN", "Error sending stop notification: {}".format(e))
 
+    def run(self):
+        """Main application loop with mode-specific logging"""
+        self.logger.log_info("MainApp", "Starting Arif Signal System", mode="SYSTEM")
+        
+        # Log initial mode
+        self.logger.log_mode_switch("INIT", self.current_mode, "System startup")
+        
+        while True:
+            try:
+                # Check for mode switch
+                new_mode = self.check_mode_switch()
+                if new_mode and new_mode != self.current_mode:
+                    self.logger.log_mode_switch(self.current_mode, new_mode, "Market condition change")
+                    self.current_mode = new_mode
+                
+                # Process signals for current mode
+                signals = self.process_signals_for_mode(self.current_mode)
+                
+                # Log mode performance
+                if signals:
+                    self.log_mode_performance()
+                
+                # Sleep based on mode
+                if self.current_mode == "SCALPING":
+                    time.sleep(15)  # 15 seconds for scalping
+                else:
+                    time.sleep(60)  # 1 minute for swing
+                    
+            except KeyboardInterrupt:
+                self.logger.log_info("MainApp", "Shutting down gracefully", mode="SYSTEM")
+                break
+            except Exception as e:
+                self.logger.log_error("MainApp", f"Error in main loop: {str(e)}", mode="SYSTEM")
+                time.sleep(30)
+    
+    def check_mode_switch(self) -> str:
+        """Check if mode should be switched based on market conditions"""
+        try:
+            # Simple market condition check (can be enhanced)
+            current_hour = datetime.now().hour
+            
+            # Scalping mode during active hours (8 AM - 8 PM)
+            if 8 <= current_hour <= 20:
+                return "SCALPING"
+            else:
+                return "SWING"
+                
+        except Exception as e:
+            self.logger.log_error("MainApp", f"Error checking mode switch: {str(e)}", mode="SYSTEM")
+            return self.current_mode
+    
+    def process_signals_for_mode(self, mode: str) -> List[SignalData]:
+        """Process signals for specific mode with mode-specific logging"""
+        signals = []
+        
+        try:
+            self.logger.log_info("MainApp", f"Processing signals for {mode} mode", mode=mode)
+            
+            for pair in self.pairs:
+                try:
+                    # Get candles based on mode
+                    if mode == "SCALPING":
+                        candles = self.data_manager.get_candles(pair, "15m", 100)
+                    else:  # SWING mode
+                        candles = self.data_manager.get_candles(pair, "1h", 200)
+                    
+                    if not candles:
+                        self.logger.log_error("MainApp", f"No candles for {pair}", pair=pair, mode=mode)
+                        continue
+                    
+                    # Process signal with mode-specific logging
+                    signal = self.signal_processor.process_signal(candles, pair, mode)
+                    
+                    if signal:
+                        signals.append(signal)
+                        self.logger.log_info("MainApp", f"Signal generated for {pair}", pair=pair, mode=mode)
+                    
+                except Exception as e:
+                    self.logger.log_error("MainApp", f"Error processing {pair}: {str(e)}", pair=pair, mode=mode)
+                    continue
+            
+            # Log mode summary
+            if signals:
+                self.logger.log_info("MainApp", f"Generated {len(signals)} signals for {mode} mode", mode=mode)
+            else:
+                self.logger.log_info("MainApp", f"No signals generated for {mode} mode", mode=mode)
+                
+        except Exception as e:
+            self.logger.log_error("MainApp", f"Error in process_signals_for_mode: {str(e)}", mode=mode)
+        
+        return signals
+    
+    def log_mode_performance(self):
+        """Log performance statistics for current mode"""
+        try:
+            # Calculate basic stats (can be enhanced with actual performance tracking)
+            stats = {
+                'total_signals': len(self.signal_processor.daily_signal_count_scalping) if self.current_mode == "SCALPING" else len(self.signal_processor.daily_signal_count_swing),
+                'win_rate': 0.65,  # Placeholder
+                'avg_risk_reward': 2.1,  # Placeholder
+                'total_pnl': 0.0  # Placeholder
+            }
+            
+            self.logger.log_mode_performance(self.current_mode, stats)
+            
+        except Exception as e:
+            self.logger.log_error("MainApp", f"Error logging mode performance: {str(e)}", mode=self.current_mode)
+
 
 # ========== ENTRY POINT ==========
 if __name__ == '__main__':
