@@ -563,3 +563,7 @@ class SwingSetupManager:
                 mode="SWING",
                 priority="HIGH"
             )
+
+    def set_notification_service(self, notification_service):
+        """Set the notification service for sending alerts"""
+        self.notification_service = notification_service
