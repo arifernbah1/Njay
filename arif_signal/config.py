@@ -36,22 +36,22 @@ class ConfigManager:
     TIMEFRAME = os.getenv('TIMEFRAME', '15m')
     TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN', '')
     TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-    MIN_VOLUME_USDT = int(os.getenv('MIN_VOLUME_USDT', '500000'))
-    SIGNAL_COOLDOWN_MINUTES = int(os.getenv('SIGNAL_COOLDOWN_MINUTES', '30'))
+    MIN_VOLUME_USDT = int(os.getenv('MIN_VOLUME_USDT', '200000'))
+    SIGNAL_COOLDOWN_MINUTES = int(os.getenv('SIGNAL_COOLDOWN_MINUTES', '15'))
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
-    # Trading configurations for each pair - Conservative for development/testing
+    # Trading configurations for each pair - Relaxed for more signals
     CONFIGS: Dict[str, TradingConfig] = {
-        'BTCUSDT': TradingConfig(4.5, 2.5, 20, 80, 2.5, 1, 2),  # Premium quality, max 2/day
-        'ETHUSDT': TradingConfig(4.3, 2.3, 22, 78, 2.5, 1, 2),  # Premium quality, max 2/day
-        'BNBUSDT': TradingConfig(4.2, 2.2, 25, 75, 2.2, 2, 2),  # High quality, max 2/day
-        'SOLUSDT': TradingConfig(4.1, 2.1, 25, 75, 2.0, 2, 2),  # High quality, max 2/day
-        'ADAUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 3, 1),  # Good quality, max 1/day
-        'AVAXUSDT': TradingConfig(4.1, 2.1, 26, 74, 2.0, 2, 2), # High quality, max 2/day
-        'LINKUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 2, 2), # Good quality, max 2/day
-        'XRPUSDT': TradingConfig(3.9, 1.9, 30, 70, 1.9, 3, 1),  # Good quality, max 1/day
-        'UNIUSDT': TradingConfig(4.0, 2.0, 28, 72, 2.0, 2, 2),  # Good quality, max 2/day
-        'DOGEUSDT': TradingConfig(3.8, 1.8, 32, 68, 1.8, 3, 1)  # Good quality, max 1/day
+        'BTCUSDT': TradingConfig(3.5, 1.8, 25, 75, 1.8, 1, 4),  # Relaxed quality, max 4/day
+        'ETHUSDT': TradingConfig(3.4, 1.7, 25, 75, 1.8, 1, 4),  # Relaxed quality, max 4/day
+        'BNBUSDT': TradingConfig(3.3, 1.6, 28, 72, 1.7, 2, 3),  # Relaxed quality, max 3/day
+        'SOLUSDT': TradingConfig(3.3, 1.6, 28, 72, 1.7, 2, 3),  # Relaxed quality, max 3/day
+        'ADAUSDT': TradingConfig(3.2, 1.5, 30, 70, 1.6, 3, 2),  # Relaxed quality, max 2/day
+        'AVAXUSDT': TradingConfig(3.3, 1.6, 28, 72, 1.7, 2, 3), # Relaxed quality, max 3/day
+        'LINKUSDT': TradingConfig(3.2, 1.5, 30, 70, 1.6, 2, 3), # Relaxed quality, max 3/day
+        'XRPUSDT': TradingConfig(3.1, 1.4, 32, 68, 1.5, 3, 2),  # Relaxed quality, max 2/day
+        'UNIUSDT': TradingConfig(3.2, 1.5, 30, 70, 1.6, 2, 3),  # Relaxed quality, max 3/day
+        'DOGEUSDT': TradingConfig(3.0, 1.3, 35, 65, 1.4, 3, 2)  # Relaxed quality, max 2/day
     }
 
     @classmethod
