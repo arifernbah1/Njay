@@ -292,6 +292,58 @@ class TradingLogger:
         except Exception as e:
             print(f"Error logging performance summary: {str(e)}")
     
+    def log_error(self, component: str, message: str, pair: str = None, 
+                  mode: str = None, error_data: Dict = None):
+        """Log detailed error information"""
+        try:
+            error_log = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "component": component,
+                "message": message,
+                "pair": pair,
+                "mode": mode,
+                "error_data": error_data or {},
+                "type": "ERROR"
+            }
+            
+            self.errors_logger.error(json.dumps(error_log, indent=2))
+            
+        except Exception as e:
+            print(f"Error logging error: {str(e)}")
+    
+    def log_recovery_attempt(self, component: str, recovery_type: str, 
+                           success: bool, pair: str = None, mode: str = None):
+        """Log recovery attempts"""
+        try:
+            recovery_log = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "component": component,
+                "recovery_type": recovery_type,
+                "success": success,
+                "pair": pair,
+                "mode": mode,
+                "type": "RECOVERY"
+            }
+            
+            self.alerts_logger.info(json.dumps(recovery_log, indent=2))
+            
+        except Exception as e:
+            print(f"Error logging recovery: {str(e)}")
+    
+    def log_system_health(self, health_data: Dict):
+        """Log system health metrics"""
+        try:
+            health_log = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "health_data": health_data,
+                "type": "SYSTEM_HEALTH"
+            }
+            
+            self.system_logger.info(json.dumps(health_log, indent=2))
+            
+        except Exception as e:
+            print(f"Error logging system health: {str(e)}")
+    
     # Helper methods
     def _update_performance_tracker(self, signal: TradingSignal):
         """Update performance tracking"""
