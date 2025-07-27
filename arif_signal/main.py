@@ -5,13 +5,14 @@ from arif_signal.data_manager import DataManager
 from arif_signal.processor import SignalProcessor
 from arif_signal.config import ConfigManager
 from arif_signal.trading_logger import TradingLogger, TradingSignal
+from arif_signal.notifications import NotificationService
 from arif_signal.models import SignalData, SignalType
 from datetime import datetime
 import time
 import sys
 
 class ArifSignalApp:
-    """Main application class with Trading Logger integration"""
+    """Main application class with Trading Logger and Telegram integration"""
     
     def __init__(self):
         self.config = ConfigManager()
@@ -21,15 +22,32 @@ class ArifSignalApp:
         # Initialize specialized Trading Logger
         self.trading_logger = TradingLogger("trading_logs")
         
-        # Initialize components with trading logger
+        # Initialize Telegram notification service
+        self.notification_service = NotificationService(
+            bot_token=self.config.get_telegram_token(),
+            chat_id=self.config.get_telegram_chat_id(),
+            trading_logger=self.trading_logger
+        )
+        
+        # Initialize components with trading logger and notification service
         self.data_manager = DataManager(self.trading_logger)
         self.signal_processor = SignalProcessor(self.trading_logger)
+        
+        # Set notification service for swing setup manager
+        self.signal_processor.swing_setup_manager.set_notification_service(self.notification_service)
         
         # Log system startup
         self.trading_logger.log_trading_alert(
             "SYSTEM_START", 
-            "Arif Signal Trading System initialized",
+            "Arif Signal Trading System initialized with Telegram integration",
             priority="HIGH"
+        )
+        
+        # Send startup notification to Telegram
+        self.notification_service.send_system_alert(
+            "SYSTEM_START",
+            "Arif Signal Trading System started successfully with Swing Setup integration",
+            "HIGH"
         )
     
     def run(self):
@@ -105,7 +123,7 @@ class ArifSignalApp:
             return self.current_mode
     
     def process_signals_for_mode(self, mode: str) -> list:
-        """Process signals for specific mode with Trading Logger and Swing Setup"""
+        """Process signals for specific mode with Trading Logger and Telegram integration"""
         signals = []
         
         try:
@@ -155,6 +173,20 @@ class ArifSignalApp:
                         
                         # Log with Trading Logger
                         self.trading_logger.log_trading_signal(trading_signal)
+                        
+                        # Send Telegram alert for signal
+                        signal_data = {
+                            'pair': signal.pair,
+                            'direction': signal.direction,
+                            'entry_price': signal.entry_price,
+                            'stop_loss': signal.stop_loss,
+                            'take_profit': signal.take_profit,
+                            'strength': signal.strength,
+                            'risk_reward': signal.risk_reward,
+                            'pattern': self._get_signal_pattern(signal, mode),
+                            'mode': mode
+                        }
+                        self.notification_service.send_signal_alert(signal_data, mode)
                         
                         signals.append(signal)
                         

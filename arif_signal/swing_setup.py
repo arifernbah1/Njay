@@ -467,7 +467,7 @@ class SwingSetupManager:
             return False
     
     def add_setup(self, setup: SwingSetup):
-        """Add new setup to active setups"""
+        """Add new setup to active setups and send Telegram alert"""
         try:
             if setup.pair not in self.active_setups:
                 self.active_setups[setup.pair] = []
@@ -486,6 +486,22 @@ class SwingSetupManager:
                 pair=setup.pair,
                 mode="SWING"
             )
+            
+            # Send Telegram alert for new setup
+            if hasattr(self, 'notification_service'):
+                setup_data = {
+                    'pair': setup.pair,
+                    'setup_type': setup.setup_type,
+                    'confidence': setup.confidence,
+                    'setup_strength': setup.setup_strength,
+                    'entry_zone': setup.entry_zone,
+                    'stop_loss': setup.stop_loss,
+                    'take_profit': setup.take_profit,
+                    'risk_reward': setup.risk_reward,
+                    'market_structure': setup.market_structure,
+                    'notes': setup.notes
+                }
+                self.notification_service.send_swing_setup_alert(setup_data, "SWING")
             
         except Exception as e:
             self.logger.log_trading_alert(
