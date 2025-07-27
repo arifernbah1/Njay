@@ -8,6 +8,11 @@ from models import TradingConfig
 # Load environment variables from .env file
 load_dotenv()
 
+class TradingMode:
+    """Trading mode definitions"""
+    SCALPING = "SCALPING"
+    SWING = "SWING"
+
 class ConfigManager:
     """Centralized configuration management with environment variables"""
 
@@ -40,6 +45,38 @@ class ConfigManager:
     SIGNAL_COOLDOWN_MINUTES = int(os.getenv('SIGNAL_COOLDOWN_MINUTES', '15'))
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 
+    # Dual Mode Configuration - Both modes run simultaneously
+    DUAL_MODE_CONFIG = {
+        TradingMode.SCALPING: {
+            'timeframe': '5m',
+            'enabled': True,
+            'min_strength': 2.5,
+            'volume_multiplier': 1.2,
+            'rsi_oversold': 20,
+            'rsi_overbought': 80,
+            'min_risk_reward': 1.2,
+            'max_daily_signals': 8,
+            'signal_cooldown': 5,
+            'pattern_sensitivity': 0.8,
+            'volume_threshold': 100000,
+            'telegram_chat_id': os.getenv('SCALPING_CHAT_ID', TELEGRAM_CHAT_ID)  # Separate chat for scalping
+        },
+        TradingMode.SWING: {
+            'timeframe': '1h',
+            'enabled': True,
+            'min_strength': 4.0,
+            'volume_multiplier': 2.0,
+            'rsi_oversold': 25,
+            'rsi_overbought': 75,
+            'min_risk_reward': 2.0,
+            'max_daily_signals': 3,
+            'signal_cooldown': 30,
+            'pattern_sensitivity': 0.6,
+            'volume_threshold': 500000,
+            'telegram_chat_id': os.getenv('SWING_CHAT_ID', TELEGRAM_CHAT_ID)  # Separate chat for swing
+        }
+    }
+
     # Trading configurations for each pair - Relaxed for more signals
     CONFIGS: Dict[str, TradingConfig] = {
         'BTCUSDT': TradingConfig(3.5, 1.8, 25, 75, 1.8, 1, 4),  # Relaxed quality, max 4/day
@@ -58,6 +95,11 @@ class ConfigManager:
     def get_config(cls, pair: str) -> TradingConfig:
         """Get trading config for a specific pair"""
         return cls.CONFIGS.get(pair, cls.CONFIGS['BTCUSDT'])
+
+    @classmethod
+    def get_mode_config(cls, mode: str) -> dict:
+        """Get configuration for specific trading mode"""
+        return cls.DUAL_MODE_CONFIG.get(mode, cls.DUAL_MODE_CONFIG[TradingMode.SCALPING])
 
     @classmethod
     def get_binance_symbol(cls, pair: str) -> str:
@@ -96,3 +138,9 @@ class ConfigManager:
             print("      {} → {}".format(pair, symbol))
         print("   💡 Premium Pairs: LINK, XRP, UNI, DOGE - All very stable!")
         print("   🚀 Total: 10 pairs ready for trading!")
+        print("   🔥 DUAL MODE ENABLED:")
+        for mode, config in cls.DUAL_MODE_CONFIG.items():
+            status = "✅" if config['enabled'] else "❌"
+            print("      {} {} Mode: {}m TF, {} signals/day, {}min cooldown".format(
+                status, mode, config['timeframe'], config['max_daily_signals'], config['signal_cooldown']
+            ))

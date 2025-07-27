@@ -41,64 +41,57 @@ from pathlib import Path
 
 # ========== MAIN APPLICATION ==========
 class TradingBot:
-    """Main trading bot application"""
-
+    """Main trading bot application with dual mode support"""
     def __init__(self):
-        # Validate configuration first
-        if not ConfigManager.validate_config():
-            print("❌ Configuration validation failed. Please check your .env file.")
-            sys.exit(1)
-
-        # Print current configuration
-        ConfigManager.print_config()
-
         # Initialize enhanced logger first
+        # This assumes TradingLogger is imported from trading_logger.py
         self.logger = TradingLogger(log_level=ConfigManager.LOG_LEVEL)
-
+        
         # Initialize components, passing the logger instance
+        # These assume the classes are imported from their respective files.
+        # For example, DataManager is imported from data_ws.py
         self.data_manager = DataManager(logger=self.logger)
-        self.analyzer = TechnicalAnalyzer(logger=self.logger, exchange=self.data_manager.exchange)
-        self.detector = PatternDetector(self.analyzer, logger=self.logger)
+        self.analyzer = TechnicalAnalyzer(logger=self.logger)  # Pass logger to analyzer
+        self.detector = PatternDetector(self.analyzer, logger=self.logger)  # Pass logger to detector
         self.signal_processor = SignalProcessor(
-            self.analyzer,
-            self.detector,
-            self.logger
+            self.analyzer, self.detector, self.logger  # Pass logger to processor
         )
-        self.notification_service = NotificationService(logger=self.logger)
+        self.notification_service = NotificationService(logger=self.logger)  # Pass logger to notification service
         self.websocket_manager = WebSocketManager(
-            self.data_manager,
-            self.signal_processor,
-            self.notification_service,
-            logger=self.logger
+            self.data_manager, self.signal_processor, self.notification_service, logger=self.logger  # Pass logger to websocket manager
         )
 
     def start(self):
-        """Start the trading bot"""
+        """Start the trading bot with dual mode"""
         try:
-            # Log bot startup using the logger
+            # Log bot startup using the logger with dual mode info
             self.logger.log_bot_start(
-                ConfigManager.TIER1_PAIRS,
-                ConfigManager.TIMEFRAME
+                ConfigManager.TIER1_PAIRS, 
+                "DUAL MODE (5m + 1h)",
+                dual_mode=True
             )
-
-            # Send Telegram notification for bot start
-            self._send_start_notification()
-
-            # Initialize data
+            
+            # Initialize data (logging is handled within DataManager's initialize_data)
             self.data_manager.initialize_data()
-
-            # Start WebSocket
+            
+            # Start WebSocket (logging is handled within WebSocketManager)
+            # The WebSocketManager.start() method itself logs connection status
             self.websocket_manager.start()
-
-            # Keep main thread alive
-            while self.websocket_manager.is_running:
-                time.sleep(1)
-
+            
+            # The main thread will stay alive as long as the WebSocket thread is running
+            # In a real application, you might use a more robust way to keep the main thread alive
+            # or manage the lifecycle of the WebSocket thread.
+            # For a simple script, a loop or just letting the WebSocket thread keep it alive is common.
+            # You might add a loop here if the WebSocket thread doesn't keep the main thread alive
+            # or if you need to perform other tasks in the main thread.
+            # Example:
+            # while self.websocket_manager.is_running:
+            #     time.sleep(1)
+            
         except KeyboardInterrupt:
-            self.logger.main_logger.info("Bot stopped by user")
-            self.stop()
+            self.logger.main_logger.info("Bot stopped by user")  # Use logger
         except Exception as e:
-            self.logger.log_error("MAIN", "Bot error: {}".format(e))
+            self.logger.log_error("MAIN", "Bot error: {}".format(e))  # Use logger
             self.stop()
 
     def _send_start_notification(self):
@@ -148,11 +141,7 @@ class TradingBot:
 
     def stop(self):
         """Stop the trading bot"""
-        self.logger.main_logger.info("Stopping trading bot...")
-        
-        # Send stop notification
-        self._send_stop_notification()
-        
+        self.logger.main_logger.info("Stopping trading bot...")  # Use logger
         self.websocket_manager.stop()
         self.logger.log_session_stats()
 
