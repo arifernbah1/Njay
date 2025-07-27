@@ -114,7 +114,7 @@ class SignalProcessor:
                 session = TimeUtils.get_trading_session()
                 self.logger.log_filter_result(
                     pair, "Time Filter", False,
-                    f"Bad session: {session}"
+                    "Bad session: {}".format(session)
                 )
                 # Log that the signal was filtered due to time
                 self.logger.log_signal_filtered(pair, "Outside good trading hours", {
@@ -128,12 +128,12 @@ class SignalProcessor:
             # Daily limit check
             today = datetime.utcnow().date()
             config = ConfigManager.get_config(pair)
-            current_signals = self.daily_signal_count[f"{pair}_{today}"]
+            current_signals = self.daily_signal_count["{}_{}".format(pair, today)]
 
             if current_signals >= config.max_daily_signals:
                 self.logger.log_filter_result(
                     pair, "Daily Limit", False,
-                    f"{current_signals}/{config.max_daily_signals} signals today"
+                    "{}/{} signals today".format(current_signals, config.max_daily_signals)
                 )
                 # Log that the signal was filtered due to daily limit
                 self.logger.log_signal_filtered(pair, "Daily signal limit reached", {
@@ -144,7 +144,7 @@ class SignalProcessor:
 
             self.logger.log_filter_result(
                 pair, "Daily Limit", True,
-                f"{current_signals}/{config.max_daily_signals} signals today"
+                                    "{}/{} signals today".format(current_signals, config.max_daily_signals)
             )
 
             # Volume filter
@@ -154,18 +154,18 @@ class SignalProcessor:
             if volume_usdt < min_volume:
                 self.logger.log_filter_result(
                     pair, "Volume Filter", False,
-                    f"${volume_usdt:,.0f} < ${min_volume:,.0f} required"
+                    "${:,.0f} < ${:,.0f} required".format(volume_usdt, min_volume)
                 )
                 # Log that the signal was filtered due to low volume
                 self.logger.log_signal_filtered(pair, "Insufficient volume", {
-                    "Actual Volume (USDT)": f"${volume_usdt:,.0f}",
-                    "Minimum Required (USDT)": f"${min_volume:,.0f}"
+                    "Actual Volume (USDT)": "${:,.0f}".format(volume_usdt),
+                    "Minimum Required (USDT)": "${:,.0f}".format(min_volume)
                 })
                 return None
 
             self.logger.log_filter_result(
                 pair, "Volume Filter", True,
-                f"${volume_usdt:,.0f} volume"
+                "${:,.0f} volume".format(volume_usdt)
             )
 
             # Pattern detection
@@ -210,18 +210,18 @@ class SignalProcessor:
             if strength < config.min_strength:
                 self.logger.log_filter_result(
                     pair, "Strength Filter", False,
-                    f"{strength:.1f} < {config.min_strength} required"
+                    "{:.1f} < {} required".format(strength, config.min_strength)
                 )
                 # Log that the signal was filtered due to insufficient strength
                 self.logger.log_signal_filtered(pair, "Insufficient signal strength", {
-                    "Actual Strength": f"{strength:.1f}★",
-                    "Required Strength": f"{config.min_strength}★"
+                    "Actual Strength": "{:.1f}★".format(strength),
+                    "Required Strength": "{}★".format(config.min_strength)
                 })
                 return None
 
             self.logger.log_filter_result(
                 pair, "Strength Filter", True,
-                f"{strength:.1f}★ strength"
+                "{:.1f}★ strength".format(strength)
             )
 
             # Risk/reward calculation
@@ -232,35 +232,35 @@ class SignalProcessor:
             if rr_ratio < config.min_risk_reward:
                 self.logger.log_filter_result(
                     pair, "Risk/Reward Filter", False,
-                    f"1:{rr_ratio:.1f} < 1:{config.min_risk_reward} required"
+                    "1:{:.1f} < 1:{} required".format(rr_ratio, config.min_risk_reward)
                 )
                 # Log that the signal was filtered due to poor R:R
                 self.logger.log_signal_filtered(pair, "Poor risk/reward ratio", {
-                    "Actual R:R": f"1:{rr_ratio:.1f}",
-                    "Required R:R": f"1:{config.min_risk_reward}"
+                    "Actual R:R": "1:{:.1f}".format(rr_ratio),
+                    "Required R:R": "1:{}".format(config.min_risk_reward)
                 })
                 return None
 
             self.logger.log_filter_result(
                 pair, "Risk/Reward Filter", True,
-                f"1:{rr_ratio:.1f} ratio"
+                "1:{:.1f} ratio".format(rr_ratio)
             )
 
             # Anti-spam check (Cooldown Filter)
             current_time = datetime.utcnow()
-            signal_key = f"{pair}_{sweep_direction}"
+            signal_key = "{}_{}".format(pair, sweep_direction)
 
             if signal_key in self.last_signals:
                 time_diff = (current_time - self.last_signals[signal_key]).total_seconds() / 60
                 if time_diff < ConfigManager.SIGNAL_COOLDOWN_MINUTES:
                     self.logger.log_filter_result(
                         pair, "Cooldown Filter", False,
-                        f"{time_diff:.1f} min < {ConfigManager.SIGNAL_COOLDOWN_MINUTES} min required"
+                        "{:.1f} min < {} min required".format(time_diff, ConfigManager.SIGNAL_COOLDOWN_MINUTES)
                     )
                     # Log that the signal was filtered due to cooldown
                     self.logger.log_signal_filtered(pair, "Signal cooldown active", {
-                        "Time Since Last Signal": f"{time_diff:.1f} minutes",
-                        "Cooldown Period": f"{ConfigManager.SIGNAL_COOLDOWN_MINUTES} minutes"
+                        "Time Since Last Signal": "{:.1f} minutes".format(time_diff),
+                        "Cooldown Period": "{} minutes".format(ConfigManager.SIGNAL_COOLDOWN_MINUTES)
                     })
                     return None
 
@@ -284,7 +284,7 @@ class SignalProcessor:
 
             # Update counters
             self.last_signals[signal_key] = current_time
-            self.daily_signal_count[f"{pair}_{today}"] += 1
+            self.daily_signal_count["{}_{}".format(pair, today)] += 1
 
             # Return the generated signal data object
             return SignalData(**signal_data)

@@ -32,7 +32,7 @@ class ColoredFormatter(logging.Formatter):
         # Use a consistent base formatter for structure
         base_formatter = logging.Formatter('%(asctime)s | %(levelname)8s | %(name)15s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         formatted_message = base_formatter.format(record)
-        return f"{color}{formatted_message}{self.COLORS['RESET']}"
+        return "{}{}{}".format(color, formatted_message, self.COLORS['RESET'])
 
 
 # ========== ENHANCED LOGGER SETUP ==========
@@ -65,7 +65,7 @@ class TradingLogger:
         console_handler.setFormatter(ColoredFormatter()) # Use the custom colored formatter
 
         file_handler_daily = logging.FileHandler(
-            f"logs/trading_bot_{datetime.now().strftime('%Y%m%d')}.log",
+            "logs/trading_bot_{}.log".format(datetime.now().strftime('%Y%m%d')),
             encoding='utf-8'
         )
         file_handler_daily.setLevel(getattr(logging, log_level.upper()))
@@ -74,7 +74,7 @@ class TradingLogger:
 
 
         file_handler_signals = logging.FileHandler(
-            f"logs/signals_{datetime.now().strftime('%Y%m%d')}.log",
+            "logs/signals_{}.log".format(datetime.now().strftime('%Y%m%d')),
             encoding='utf-8'
         )
         file_handler_signals.setLevel(logging.INFO) # Signals usually INFO level
@@ -104,21 +104,21 @@ class TradingLogger:
         self.main_logger.info("=" * 80)
         self.main_logger.info("🚀 ENHANCED TRADING BOT - STARTING")
         self.main_logger.info("=" * 80)
-        self.main_logger.info(f"📅 Start Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')}")
-        self.main_logger.info(f"⏰ Timeframe: {timeframe}")
-        self.main_logger.info(f"💎 Pairs: {', '.join(pairs)}")
-        self.main_logger.info(f"🕐 Session: {self.get_trading_session()}")
+        self.main_logger.info("📅 Start Time: {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')))
+        self.main_logger.info("⏰ Timeframe: {}".format(timeframe))
+        self.main_logger.info("💎 Pairs: {}".format(', '.join(pairs)))
+        self.main_logger.info("🕐 Session: {}".format(self.get_trading_session()))
         self.main_logger.info("-" * 80)
 
     def log_data_initialization(self, pair: str, candles_loaded: int):
-        self.data_logger.info(f"📊 {pair}: Loading historical data...")
-        self.data_logger.info(f"✅ {pair}: {candles_loaded} candles loaded successfully")
+        self.data_logger.info("📊 {}: Loading historical data...".format(pair))
+        self.data_logger.info("✅ {}: {} candles loaded successfully".format(pair, candles_loaded))
 
     def log_websocket_connection(self, status: str, streams_count: int = 0):
         if status == "CONNECTED":
             self.websocket_logger.info("🔗 WebSocket connected successfully")
             if streams_count > 0:
-                self.websocket_logger.info(f"📡 Subscribed to {streams_count} data streams")
+                self.websocket_logger.info("📡 Subscribed to {} data streams".format(streams_count))
         elif status == "DISCONNECTED":
             self.websocket_logger.warning("❌ WebSocket disconnected")
         elif status == "RECONNECTING":
@@ -128,10 +128,17 @@ class TradingLogger:
 
     def log_candle_received(self, pair: str, candle_data: dict):
         self.websocket_logger.debug(
-            f"📈 {pair}: New candle - "
-            f"O:{candle_data.get('o', 'N/A'):.4f} H:{candle_data.get('h', 'N/A'):.4f} "
-            f"L:{candle_data.get('l', 'N/A'):.4f} C:{candle_data.get('c', 'N/A'):.4f} "
-            f"V:{candle_data.get('v', 'N/A'):.0f}"
+            "📈 {}: New candle - "
+            "O:{:.4f} H:{:.4f} "
+            "L:{:.4f} C:{:.4f} "
+            "V:{:.0f}".format(
+                pair,
+                float(candle_data.get('o', 0)),
+                float(candle_data.get('h', 0)),
+                float(candle_data.get('l', 0)),
+                float(candle_data.get('c', 0)),
+                float(candle_data.get('v', 0))
+            )
         )
         self.session_stats['websocket_messages'] += 1
 
