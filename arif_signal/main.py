@@ -7,6 +7,7 @@ from arif_signal.config import ConfigManager
 from arif_signal.trading_logger import TradingLogger, TradingSignal
 from arif_signal.notifications import NotificationService
 from arif_signal.error_handler import ErrorHandler, ErrorCategory, ErrorSeverity
+from arif_signal.health_monitor import BotHealthMonitor, ComponentStatus
 from arif_signal.models import SignalData, SignalType
 from datetime import datetime
 import time
@@ -16,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
 class ArifSignalApp:
-    """Main application class with parallel dual mode execution"""
+    """Main application class with parallel dual mode execution and health monitoring"""
     
     def __init__(self):
         try:
@@ -40,6 +41,9 @@ class ArifSignalApp:
             # Initialize Error Handler
             self.error_handler = ErrorHandler(self.trading_logger, self.notification_service)
             
+            # Initialize Health Monitor
+            self.health_monitor = BotHealthMonitor(self.trading_logger, self.notification_service)
+            
             # Initialize components with error handling
             self.data_manager = DataManager(self.trading_logger)
             self.signal_processor = SignalProcessor(self.trading_logger)
@@ -55,14 +59,14 @@ class ArifSignalApp:
             # Log system startup
             self.trading_logger.log_trading_alert(
                 "SYSTEM_START", 
-                "Arif Signal Trading System initialized with PARALLEL dual mode execution",
+                "Arif Signal Trading System initialized with PARALLEL dual mode execution and health monitoring",
                 priority="HIGH"
             )
             
             # Send startup notification to Telegram
             self.notification_service.send_system_alert(
                 "SYSTEM_START",
-                "Arif Signal Trading System started with PARALLEL SCALPING + SWING modes",
+                "Arif Signal Trading System started with PARALLEL SCALPING + SWING modes + Health Monitoring",
                 "HIGH"
             )
             
@@ -71,11 +75,11 @@ class ArifSignalApp:
             sys.exit(1)
     
     def run(self):
-        """Main application loop with parallel dual mode execution"""
+        """Main application loop with parallel dual mode execution and health monitoring"""
         try:
             self.trading_logger.log_trading_alert(
                 "SYSTEM_RUNNING",
-                "Trading system is now running with PARALLEL dual modes",
+                "Trading system is now running with PARALLEL dual modes and health monitoring",
                 priority="HIGH"
             )
             
@@ -154,7 +158,7 @@ class ArifSignalApp:
             )
     
     def _run_scalping_mode(self):
-        """Run SCALPING mode continuously"""
+        """Run SCALPING mode continuously with health monitoring"""
         self.trading_logger.log_trading_alert(
             "SCALPING_START",
             "SCALPING mode thread started",
@@ -162,10 +166,23 @@ class ArifSignalApp:
             priority="HIGH"
         )
         
+        # Update health monitor
+        self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.RUNNING)
+        
         while self.running and self.scalping_active:
             try:
+                start_time = time.time()
+                
                 # Process scalping signals
                 signals = self.process_signals_for_mode("SCALPING")
+                
+                # Update health metrics
+                processing_time = (time.time() - start_time) * 1000  # Convert to ms
+                self.health_monitor.add_processing_time(processing_time)
+                
+                # Update signal counters
+                for signal in signals:
+                    self.health_monitor.increment_signal("SCALPING")
                 
                 # Log scalping performance
                 if signals:
@@ -175,12 +192,16 @@ class ArifSignalApp:
                 time.sleep(15)
                 
             except Exception as e:
+                self.health_monitor.increment_error()
+                self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.ERROR)
+                
                 self.error_handler.handle_error(
                     e, "ScalpingMode", ErrorCategory.PROCESSING_ERROR,
                     ErrorSeverity.HIGH, mode="SCALPING"
                 )
                 time.sleep(10)  # Wait before retry
         
+        self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.STOPPED)
         self.trading_logger.log_trading_alert(
             "SCALPING_STOP",
             "SCALPING mode thread stopped",
@@ -189,7 +210,7 @@ class ArifSignalApp:
         )
     
     def _run_swing_mode(self):
-        """Run SWING mode continuously"""
+        """Run SWING mode continuously with health monitoring"""
         self.trading_logger.log_trading_alert(
             "SWING_START",
             "SWING mode thread started",
@@ -197,13 +218,26 @@ class ArifSignalApp:
             priority="HIGH"
         )
         
+        # Update health monitor
+        self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.RUNNING)
+        
         while self.running and self.swing_active:
             try:
+                start_time = time.time()
+                
                 # Process swing signals
                 signals = self.process_signals_for_mode("SWING")
                 
                 # Monitor swing setups
                 self.monitor_swing_setups()
+                
+                # Update health metrics
+                processing_time = (time.time() - start_time) * 1000  # Convert to ms
+                self.health_monitor.add_processing_time(processing_time)
+                
+                # Update signal counters
+                for signal in signals:
+                    self.health_monitor.increment_signal("SWING")
                 
                 # Log swing performance
                 if signals:
@@ -213,12 +247,16 @@ class ArifSignalApp:
                 time.sleep(60)
                 
             except Exception as e:
+                self.health_monitor.increment_error()
+                self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.ERROR)
+                
                 self.error_handler.handle_error(
                     e, "SwingMode", ErrorCategory.PROCESSING_ERROR,
                     ErrorSeverity.HIGH, mode="SWING"
                 )
                 time.sleep(10)  # Wait before retry
         
+        self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.STOPPED)
         self.trading_logger.log_trading_alert(
             "SWING_STOP",
             "SWING mode thread stopped",
@@ -232,6 +270,17 @@ class ArifSignalApp:
             # Check if threads are alive
             scalping_alive = self.scalping_thread and self.scalping_thread.is_alive()
             swing_alive = self.swing_thread and self.swing_thread.is_alive()
+            
+            # Update health monitor component status
+            if scalping_alive:
+                self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.RUNNING)
+            else:
+                self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.ERROR)
+            
+            if swing_alive:
+                self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.RUNNING)
+            else:
+                self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.ERROR)
             
             # Log thread status
             if not scalping_alive and self.scalping_active:
@@ -252,15 +301,15 @@ class ArifSignalApp:
                 )
                 self._restart_swing_thread()
             
-            # Log system health
-            health_data = {
-                "scalping_active": scalping_alive,
-                "swing_active": swing_alive,
-                "total_threads": 2,
-                "running_threads": sum([scalping_alive, swing_alive])
-            }
+            # Get health status
+            health_status = self.health_monitor.get_system_status()
             
-            self.trading_logger.log_system_health(health_data)
+            # Log system health
+            self.trading_logger.log_trading_alert(
+                "SYSTEM_HEALTH",
+                f"System health check: {health_status}",
+                priority="MEDIUM"
+            )
             
         except Exception as e:
             self.error_handler.handle_error(
@@ -280,6 +329,8 @@ class ArifSignalApp:
                 daemon=True
             )
             self.scalping_thread.start()
+            
+            self.health_monitor.update_component_status("SCALPING_THREAD", ComponentStatus.RESTARTING)
             
             self.trading_logger.log_trading_alert(
                 "THREAD_RESTART",
@@ -307,6 +358,8 @@ class ArifSignalApp:
             )
             self.swing_thread.start()
             
+            self.health_monitor.update_component_status("SWING_THREAD", ComponentStatus.RESTARTING)
+            
             self.trading_logger.log_trading_alert(
                 "THREAD_RESTART",
                 "SWING thread restarted successfully",
@@ -321,7 +374,7 @@ class ArifSignalApp:
             )
     
     def process_signals_for_mode(self, mode: str) -> list:
-        """Process signals for specific mode with comprehensive error handling"""
+        """Process signals for specific mode with comprehensive error handling and health monitoring"""
         signals = []
         
         try:
@@ -347,6 +400,7 @@ class ArifSignalApp:
                         if signal:
                             signals.append(signal)
                     except Exception as e:
+                        self.health_monitor.increment_error()
                         self.error_handler.handle_error(
                             e, "PairProcessing", ErrorCategory.PROCESSING_ERROR,
                             ErrorSeverity.MEDIUM, pair=pair, mode=mode
@@ -367,6 +421,7 @@ class ArifSignalApp:
                 )
                 
         except Exception as e:
+            self.health_monitor.increment_error()
             self.error_handler.handle_error(
                 e, "SignalProcessing", ErrorCategory.PROCESSING_ERROR,
                 ErrorSeverity.HIGH, mode=mode
@@ -375,7 +430,7 @@ class ArifSignalApp:
         return signals
     
     def _process_single_pair(self, pair: str, mode: str) -> Optional[SignalData]:
-        """Process single pair for specific mode"""
+        """Process single pair for specific mode with health monitoring"""
         try:
             # Get candles with error handling
             candles = self.error_handler.safe_execute(
@@ -446,7 +501,9 @@ class ArifSignalApp:
                         'mode': mode
                     }
                     self.notification_service.send_signal_alert(signal_data, mode)
+                    self.health_monitor.increment_telegram_sent()
                 except Exception as e:
+                    self.health_monitor.increment_telegram_failed()
                     self.error_handler.handle_error(
                         e, "TelegramNotification", ErrorCategory.TELEGRAM_ERROR,
                         ErrorSeverity.LOW, pair=pair, mode=mode
@@ -464,6 +521,7 @@ class ArifSignalApp:
             return None
             
         except Exception as e:
+            self.health_monitor.increment_error()
             self.error_handler.handle_error(
                 e, "SinglePairProcessing", ErrorCategory.PROCESSING_ERROR,
                 ErrorSeverity.MEDIUM, pair=pair, mode=mode
@@ -500,6 +558,7 @@ class ArifSignalApp:
                 )
                 
         except Exception as e:
+            self.health_monitor.increment_error()
             self.error_handler.handle_error(
                 e, "SwingSetupMonitor", ErrorCategory.PROCESSING_ERROR,
                 ErrorSeverity.MEDIUM, mode="SWING"
@@ -519,6 +578,9 @@ class ArifSignalApp:
             self.scalping_active = False
             self.swing_active = False
             
+            # Stop health monitoring
+            self.health_monitor.stop_monitoring()
+            
             # Wait for threads to finish
             if self.scalping_thread:
                 self.scalping_thread.join(timeout=10)
@@ -536,7 +598,7 @@ class ArifSignalApp:
             # Send shutdown notification
             self.notification_service.send_system_alert(
                 "SYSTEM_SHUTDOWN",
-                "Arif Signal Trading System shutdown completed (Parallel Dual Mode)",
+                "Arif Signal Trading System shutdown completed (Parallel Dual Mode + Health Monitoring)",
                 "HIGH"
             )
             
@@ -633,9 +695,10 @@ class ArifSignalApp:
             return "UNKNOWN"
 
 if __name__ == "__main__":
-    print("🚀 Starting Arif Signal Trading System with PARALLEL Dual Mode...")
+    print("🚀 Starting Arif Signal Trading System with PARALLEL Dual Mode + Health Monitoring...")
     print("⚡ SCALPING Mode: Active (15s cycle)")
     print("📈 SWING Mode: Active (60s cycle)")
     print("🔄 Both modes running simultaneously!")
+    print("🏥 Health Monitoring: Active (5min cycle)")
     app = ArifSignalApp()
     app.run()
