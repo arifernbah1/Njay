@@ -178,7 +178,7 @@ class DataManager:
 class WebSocketManager:
     """Handle WebSocket connections and data streaming for dual mode"""
     # Add logger parameter
-    def __init__(self, data_manager: DataManager, signal_processor: EnhancedSignalProcessor, notification_service: NotificationService, logger: Optional[TradingLogger] = None):
+    def __init__(self, data_manager: DataManager, signal_processor: SignalProcessor, notification_service: NotificationService, logger: Optional[TradingLogger] = None):
         self.data_manager = data_manager
         self.signal_processor = signal_processor
         self.notification_service = notification_service
