@@ -108,20 +108,20 @@ class TradingBot:
             start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
             session = TimeUtils.get_trading_session()
             
-            message = f"""
+            message = """
 🤖 <b>ARIF SIGNAL BOT - STARTED</b>
 
 ✅ <b>Status:</b> Bot successfully started
-🕐 <b>Start Time:</b> {start_time}
-📊 <b>Timeframe:</b> {ConfigManager.TIMEFRAME}
-🕐 <b>Session:</b> {session}
+🕐 <b>Start Time:</b> {}
+📊 <b>Timeframe:</b> {}
+🕐 <b>Session:</b> {}
 
-💎 <b>Trading Pairs ({len(ConfigManager.TIER1_PAIRS)}):</b>
-{', '.join(ConfigManager.TIER1_PAIRS)}
+💎 <b>Trading Pairs ({}):</b>
+{}
 
 💰 <b>Configuration:</b>
-• Min Volume: ${ConfigManager.MIN_VOLUME_USDT:,}
-• Cooldown: {ConfigManager.SIGNAL_COOLDOWN_MINUTES} minutes
+• Min Volume: ${:,}
+• Cooldown: {} minutes
 • Max Daily Signals: 1-2 per pair
 
 🎯 <b>Strategy:</b> Conservative Development Mode
@@ -129,7 +129,11 @@ class TradingBot:
 🔗 <b>WebSocket:</b> Connecting...
 
 <i>Bot is now monitoring for high-quality trading signals...</i>
-            """.strip()
+            """.format(
+                start_time, ConfigManager.TIMEFRAME, session,
+                len(ConfigManager.TIER1_PAIRS), ', '.join(ConfigManager.TIER1_PAIRS),
+                ConfigManager.MIN_VOLUME_USDT, ConfigManager.SIGNAL_COOLDOWN_MINUTES
+            ).strip()
 
             # Send notification
             success = self.notification_service._send_telegram(message, "BOT_START")
@@ -157,11 +161,11 @@ class TradingBot:
         try:
             stop_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')
             
-            message = f"""
+            message = """
 🛑 <b>ARIF SIGNAL BOT - STOPPED</b>
 
 ❌ <b>Status:</b> Bot stopped
-🕐 <b>Stop Time:</b> {stop_time}
+🕐 <b>Stop Time:</b> {}
 
 📊 <b>Session Summary:</b>
 • Check logs for detailed statistics
@@ -169,7 +173,7 @@ class TradingBot:
 • Restart when ready
 
 <i>Bot has been safely stopped.</i>
-            """.strip()
+            """.format(stop_time).strip()
 
             # Send notification
             success = self.notification_service._send_telegram(message, "BOT_STOP")

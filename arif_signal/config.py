@@ -75,7 +75,7 @@ class ConfigManager:
                 missing_vars.append(var)
         
         if missing_vars:
-            print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+            print("❌ Missing required environment variables: {}".format(', '.join(missing_vars)))
             print("Please check your .env file and ensure all required variables are set.")
             return False
         
@@ -85,12 +85,12 @@ class ConfigManager:
     def print_config(cls):
         """Print current configuration (without sensitive data)"""
         print("🔧 Current Configuration:")
-        print(f"   📊 Timeframe: {cls.TIMEFRAME}")
-        print(f"   💰 Min Volume: ${cls.MIN_VOLUME_USDT:,}")
-        print(f"   ⏰ Cooldown: {cls.SIGNAL_COOLDOWN_MINUTES} minutes")
-        print(f"   📝 Log Level: {cls.LOG_LEVEL}")
-        print(f"   📱 Telegram: {'✅ Configured' if cls.TELEGRAM_TOKEN else '❌ Not configured'}")
-        print(f"   🎯 Trading Pairs: {len(cls.TIER1_PAIRS)} pairs")
+        print("   📊 Timeframe: {}".format(cls.TIMEFRAME))
+        print("   💰 Min Volume: ${:,}".format(cls.MIN_VOLUME_USDT))
+        print("   ⏰ Cooldown: {} minutes".format(cls.SIGNAL_COOLDOWN_MINUTES))
+        print("   📝 Log Level: {}".format(cls.LOG_LEVEL))
+        print("   📱 Telegram: {}".format('✅ Configured' if cls.TELEGRAM_TOKEN else '❌ Not configured'))
+        print("   🎯 Trading Pairs: {} pairs".format(len(cls.TIER1_PAIRS)))
         print("   📋 Symbol Mapping:")
         for pair, symbol in cls.SYMBOL_MAPPING.items():
             print("      {} → {}".format(pair, symbol))

@@ -57,27 +57,36 @@ class NotificationService:
         session = TimeUtils.get_trading_session()
         wib_time = TimeUtils.get_wib_time_string()
 
-        return f"""
-{strength_emoji} <b>{signal_text} ENTRY</b> {direction_emoji}
+        return """
+{} <b>{} ENTRY</b> {}
 
-💎 <b>{signal.pair.replace('USDT', '/USDT')}</b>
-📊 <b>Quality:</b> {quality} ({signal.strength:.1f}★)
+💎 <b>{}</b>
+📊 <b>Quality:</b> {} ({:.1f}★)
 🎯 <b>Setup:</b> Enhanced Pattern Detection
 
-💰 <b>Entry:</b> ${signal.entry_price:.4f}
-🛑 <b>Stop Loss:</b> ${signal.stop_loss:.4f} (-{stop_pct:.1f}%)
-🎯 <b>Take Profit:</b> ${signal.take_profit:.4f} (+{tp_pct:.1f}%)
+💰 <b>Entry:</b> ${:.4f}
+🛑 <b>Stop Loss:</b> ${:.4f} (-{:.1f}%)
+🎯 <b>Take Profit:</b> ${:.4f} (+{:.1f}%)
 
-🎯 <b>Risk:Reward = 1:{signal.risk_reward:.1f}</b>
+🎯 <b>Risk:Reward = 1:{:.1f}</b>
 
-🕐 <b>Session:</b> {session}
-🕐 <b>Time:</b> {wib_time}
+🕐 <b>Session:</b> {}
+🕐 <b>Time:</b> {}
 <i>⚡ Refactored Signal System v3.0</i>
-        """.strip()
+        """.format(
+            strength_emoji, signal_text, direction_emoji,
+            signal.pair.replace('USDT', '/USDT'),
+            quality, signal.strength,
+            signal.entry_price,
+            signal.stop_loss, stop_pct,
+            signal.take_profit, tp_pct,
+            signal.risk_reward,
+            session, wib_time
+        ).strip()
 
     def _send_telegram(self, message: str, pair: str) -> bool:
         """Send message via Telegram API with logging"""
-        url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+        url = "https://api.telegram.org/bot{}/sendMessage".format(self.token)
         data = {
             'chat_id': self.chat_id,
             'text': message,
