@@ -374,31 +374,84 @@ class TradingLogger:
         wins = self.performance_tracker[mode]['winning_signals']
         self.performance_tracker[mode]['win_rate'] = wins / total if total > 0 else 0.0
     
-    def _get_market_conditions(self, pair: str) -> Dict:
-        """Get current market conditions (placeholder)"""
+    def _get_market_conditions(self, pair: str, analysis: dict = None) -> Dict:
+        """Get current market conditions based on analysis data"""
+        if not analysis:
+            return {
+                'volatility': 'UNKNOWN',
+                'trend': 'UNKNOWN',
+                'volume': 'UNKNOWN',
+                'spread': 'UNKNOWN'
+            }
+        closes = analysis.get('closes', [])
+        volumes = analysis.get('volumes', [])
+        if closes and len(closes) > 10:
+            import numpy as np
+            std = float(np.std(closes[-10:]))
+            volatility = 'HIGH' if std > 0.01 * closes[-1] else 'LOW' if std < 0.002 * closes[-1] else 'MEDIUM'
+        else:
+            volatility = 'UNKNOWN'
+        trend = analysis.get('trend', 'UNKNOWN')
+        if volumes and len(volumes) > 10:
+            avg_vol = sum(volumes[-10:]) / 10
+            volume = 'HIGH' if volumes[-1] > 1.5 * avg_vol else 'LOW' if volumes[-1] < 0.7 * avg_vol else 'NORMAL'
+        else:
+            volume = 'UNKNOWN'
+        spread = 'TIGHT'
+        if closes and len(closes) > 1:
+            spread_val = abs(closes[-1] - closes[-2]) / closes[-1]
+            spread = 'WIDE' if spread_val > 0.005 else 'TIGHT'
         return {
-            'volatility': 'MEDIUM',
-            'trend': 'SIDEWAYS',
-            'volume': 'NORMAL',
-            'spread': 'TIGHT'
+            'volatility': volatility,
+            'trend': trend,
+            'volume': volume,
+            'spread': spread
         }
-    
+
     def _calculate_risk_level(self, details: Dict) -> str:
-        """Calculate risk level based on details"""
-        # Placeholder implementation
-        return "MEDIUM"
-    
+        """Calculate risk level based on risk/reward and stoploss size"""
+        rr = details.get('risk_reward', 1.0)
+        stop = details.get('stop_loss', 0.0)
+        entry = details.get('entry_price', 0.0)
+        if entry and stop:
+            risk_pct = abs(entry - stop) / entry
+            if rr >= 2.5 and risk_pct < 0.01:
+                return 'LOW'
+            elif rr >= 1.5 and risk_pct < 0.02:
+                return 'MEDIUM'
+            else:
+                return 'HIGH'
+        return 'UNKNOWN'
+
     def _determine_sentiment(self, analysis: Dict) -> str:
-        """Determine market sentiment"""
-        # Placeholder implementation
-        return "NEUTRAL"
-    
+        """Determine market sentiment from trend and momentum indicators"""
+        trend = analysis.get('trend', 'UNKNOWN')
+        rsi = analysis.get('rsi', 50)
+        macd = analysis.get('macd_line', 0)
+        if trend == 'BULLISH' and rsi > 60 and macd > 0:
+            return 'BULLISH'
+        elif trend == 'BEARISH' and rsi < 40 and macd < 0:
+            return 'BEARISH'
+        else:
+            return 'NEUTRAL'
+
     def _calculate_volatility(self, analysis: Dict) -> float:
-        """Calculate volatility"""
-        # Placeholder implementation
-        return 0.5
-    
+        """Calculate volatility as std dev of close prices (normalized)"""
+        closes = analysis.get('closes', [])
+        if closes and len(closes) > 10:
+            import numpy as np
+            return float(np.std(closes[-10:]) / closes[-1])
+        return 0.0
+
     def _calculate_trend_strength(self, analysis: Dict) -> float:
-        """Calculate trend strength"""
-        # Placeholder implementation
-        return 0.7
+        """Calculate trend strength based on EMA slope and MACD"""
+        ema_20 = analysis.get('ema_20', 0)
+        ema_50 = analysis.get('ema_50', 0)
+        ema_200 = analysis.get('ema_200', 0)
+        closes = analysis.get('closes', [])
+        macd = analysis.get('macd_line', 0)
+        if closes and len(closes) > 20:
+            slope = (closes[-1] - closes[-20]) / closes[-20]
+            macd_strength = abs(macd) / (abs(closes[-1]) + 1e-6)
+            return min(1.0, max(0.0, 0.5 * abs(slope) + 0.5 * macd_strength))
+        return 0.0
