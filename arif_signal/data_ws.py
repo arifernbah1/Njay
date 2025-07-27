@@ -17,6 +17,7 @@ from analysis import TechnicalAnalyzer, PatternDetector
 from processor import SignalProcessor
 from notifications import NotificationService
 from config import ConfigManager
+from trading_logger import TradingLogger
 
 import logging
 
