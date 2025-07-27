@@ -302,59 +302,90 @@ class PatternDetector:
         self.logger = logger # Store logger
 
     # Modified to use logger
-    def detect_sweep(self, candles: List[CandleData], pair: str) -> Tuple[bool, Optional[str]]:
-        """Advanced sweep detection"""
+    def detect_sweep(self, candles: List[CandleData], pair: str, mode: str = "SCALPING") -> Tuple[bool, Optional[str]]:
+        """Advanced sweep detection with mode-specific analysis"""
         if len(candles) < 20:
             if self.logger:
                 self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - insufficient candles ({})".format(pair, len(candles)))
             return False, None
+        
         current = candles[-1]
         config = ConfigManager.get_config(pair)
+        
+        # Mode-specific technical analysis
+        if mode == "SCALPING":
+            ta_data = self.analyze_scalping_15m(candles, pair)
+        else:  # SWING mode
+            ta_data = self.analyze_swing_1h(candles, pair)
+        
         # Volume validation
-        recent_volumes = [c.volume for c in candles[-10:]]
-        avg_volume = sum(recent_volumes) / len(recent_volumes) if len(recent_volumes) > 0 else 0
-        if avg_volume > 0 and current.volume <= avg_volume * config.volume_multiplier:
-            if self.logger:
-                self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - insufficient volume ({:.0f} vs avg {:.0f} * {})".format(pair, current.volume, avg_volume, config.volume_multiplier))
-            return False, None
-        # Get support/resistance levels - Error logging for this is handled in TechnicalAnalyzer if needed,
-        # but the method itself returns empty lists on failure, which is handled here.
-        support_levels, resistance_levels = self.analyzer.find_support_resistance(candles)
+        if mode == "SCALPING":
+            volume_ratio = ta_data.get('volume_ratio', 1)
+            if volume_ratio <= config.volume_multiplier:
+                if self.logger:
+                    self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - insufficient volume (ratio: {:.2f})".format(pair, volume_ratio))
+                return False, None
+        else:  # SWING mode
+            mfi = ta_data.get('volume_analysis', {}).get('mfi', 50)
+            if mfi < 50:  # Low money flow
+                if self.logger:
+                    self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - low MFI ({:.2f})".format(pair, mfi))
+                return False, None
+        
+        # Get support/resistance levels
+        if mode == "SCALPING":
+            support_levels = ta_data.get('support_levels', [])
+            resistance_levels = ta_data.get('resistance_levels', [])
+        else:  # SWING mode
+            support_levels = ta_data.get('levels', {}).get('swing_lows', [])
+            resistance_levels = ta_data.get('levels', {}).get('swing_highs', [])
+        
         if not support_levels and not resistance_levels:
             if self.logger:
                 self.logger.pattern_logger.debug("   🔍 {}: Sweep check failed - no significant S/R levels found".format(pair))
             return False, None
-        # Higher timeframe trend (simplified for refactor)
-        # This method might log internally if it fails to fetch HTF data
+        
+        # Higher timeframe trend
         htf_trend = self._get_higher_timeframe_trend(pair)
         if self.logger:
             self.logger.pattern_logger.debug("   🔍 {}: HTF Trend: {}".format(pair, htf_trend))
+        
         # Check for bullish sweep
         for support in support_levels:
             tolerance = support * 0.0015
             if (current.low <= support - tolerance and current.close > support + tolerance and htf_trend in ["BULLISH", "NEUTRAL"]):
-                closes = [c.close for c in candles[-14:]]
-                rsi = self.analyzer.calculate_rsi(closes)
-                if rsi < config.rsi_overbought:
-                    if self.logger:
-                        self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep conditions met near support {:.4f}".format(pair, support))
-                    return True, SignalType.BULLISH
-                else:
-                    if self.logger:
-                        self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep near support {:.4f} failed RSI check ({:.2f} not < {})".format(pair, support, rsi, config.rsi_overbought))
+                # Mode-specific RSI check
+                if mode == "SCALPING":
+                    rsi = ta_data.get('rsi', 50)
+                    if rsi < config.rsi_overbought:
+                        if self.logger:
+                            self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep conditions met near support {:.4f}".format(pair, support))
+                        return True, SignalType.BULLISH
+                else:  # SWING mode
+                    weekly_rsi = ta_data.get('oscillators', {}).get('weekly_rsi', 50)
+                    if weekly_rsi < 70:  # Not overbought
+                        if self.logger:
+                            self.logger.pattern_logger.debug("   🔍 {}: Bullish sweep conditions met near support {:.4f}".format(pair, support))
+                        return True, SignalType.BULLISH
+        
         # Check for bearish sweep
         for resistance in resistance_levels:
             tolerance = resistance * 0.0015
             if (current.high >= resistance + tolerance and current.close < resistance - tolerance and htf_trend in ["BEARISH", "NEUTRAL"]):
-                closes = [c.close for c in candles[-14:]]
-                rsi = self.analyzer.calculate_rsi(closes)
-                if rsi > config.rsi_oversold:
-                    if self.logger:
-                        self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep conditions met near resistance {:.4f}".format(pair, resistance))
-                    return True, SignalType.BEARISH
-                else:
-                    if self.logger:
-                        self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep near resistance {:.4f} failed RSI check ({:.2f} not > {})".format(pair, resistance, rsi, config.rsi_oversold))
+                # Mode-specific RSI check
+                if mode == "SCALPING":
+                    rsi = ta_data.get('rsi', 50)
+                    if rsi > config.rsi_oversold:
+                        if self.logger:
+                            self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep conditions met near resistance {:.4f}".format(pair, resistance))
+                        return True, SignalType.BEARISH
+                else:  # SWING mode
+                    weekly_rsi = ta_data.get('oscillators', {}).get('weekly_rsi', 50)
+                    if weekly_rsi > 30:  # Not oversold
+                        if self.logger:
+                            self.logger.pattern_logger.debug("   🔍 {}: Bearish sweep conditions met near resistance {:.4f}".format(pair, resistance))
+                        return True, SignalType.BEARISH
+        
         if self.logger:
             self.logger.pattern_logger.debug("   🔍 {}: No sweep pattern detected after checks".format(pair))
         return False, None
@@ -576,3 +607,161 @@ class PatternDetector:
             if self.logger:
                 self.logger.log_error("PatternDetector", "Error fetching higher timeframe trend for {}: {}".format(pair, e), pair=pair)
             return "NEUTRAL"  # Return NEUTRAL on error
+
+    # Mode-Specific Technical Analysis
+    def analyze_scalping_15m(self, candles: List[CandleData], pair: str) -> Dict:
+        """Technical analysis specifically for Scalping 15m mode"""
+        if len(candles) < 20:
+            return {}
+        
+        closes = [c.close for c in candles]
+        current = candles[-1]
+        
+        # 1. Simple RSI Analysis
+        rsi = self.analyzer.calculate_rsi(closes, 14)
+        
+        # 2. Volume Analysis
+        recent_volumes = [c.volume for c in candles[-10:]]
+        avg_volume = sum(recent_volumes) / len(recent_volumes) if recent_volumes else 0
+        volume_ratio = current.volume / avg_volume if avg_volume > 0 else 1
+        
+        # 3. Basic Support/Resistance
+        support_levels, resistance_levels = self.analyzer.find_support_resistance(candles, lookback=15)
+        
+        # 4. Simple Trend Analysis
+        sma_20 = sum(closes[-20:]) / 20 if len(closes) >= 20 else closes[-1]
+        trend = "BULLISH" if current.close > sma_20 else "BEARISH"
+        
+        return {
+            'rsi': rsi,
+            'volume_ratio': volume_ratio,
+            'support_levels': support_levels,
+            'resistance_levels': resistance_levels,
+            'trend': trend,
+            'sma_20': sma_20,
+            'current_price': current.close
+        }
+
+    def analyze_swing_1h(self, candles: List[CandleData], pair: str) -> Dict:
+        """Technical analysis specifically for Swing 1h mode"""
+        if len(candles) < 50:
+            return {}
+        
+        closes = [c.close for c in candles]
+        current = candles[-1]
+        
+        # 1. Multi-EMA Trend Analysis
+        ema_20 = self.analyzer.calculate_ema(closes, 20)
+        ema_50 = self.analyzer.calculate_ema(closes, 50)
+        ema_200 = self.analyzer.calculate_ema(closes, 200)
+        
+        # 2. MACD Analysis
+        macd_line, macd_signal, macd_histogram = self.analyzer.calculate_macd(closes)
+        
+        # 3. Ichimoku Cloud
+        tenkan, kijun, senkou_a, senkou_b = self.analyzer.calculate_ichimoku(candles)
+        
+        # 4. Advanced Oscillators
+        weekly_rsi = self.analyzer.calculate_rsi(closes, 14)  # Weekly proxy
+        stochastic_k, stochastic_d = self.analyzer.calculate_stochastic(candles)
+        cci = self.analyzer.calculate_cci(candles)
+        
+        # 5. Volume Analysis
+        mfi = self.analyzer.calculate_mfi(candles)
+        
+        # 6. Advanced Support/Resistance
+        pivot_points = self.analyzer.calculate_pivot_points(candles)
+        swing_highs, swing_lows = self.analyzer.find_swing_levels(candles)
+        
+        # 7. Trend Context Analysis
+        trend_context = self._determine_comprehensive_trend(
+            ema_20, ema_50, ema_200, macd_line, macd_signal, 
+            tenkan, kijun, current.close
+        )
+        
+        return {
+            'ema_analysis': {
+                'ema_20': ema_20,
+                'ema_50': ema_50,
+                'ema_200': ema_200,
+                'trend_alignment': self._analyze_ema_trend(ema_20, ema_50, ema_200, current.close)
+            },
+            'macd_analysis': {
+                'macd_line': macd_line,
+                'macd_signal': macd_signal,
+                'macd_histogram': macd_histogram,
+                'macd_bullish': macd_line > macd_signal and macd_histogram > 0
+            },
+            'ichimoku_analysis': {
+                'tenkan': tenkan,
+                'kijun': kijun,
+                'senkou_a': senkou_a,
+                'senkou_b': senkou_b,
+                'cloud_bullish': senkou_a > senkou_b and current.close > senkou_a
+            },
+            'oscillators': {
+                'weekly_rsi': weekly_rsi,
+                'stochastic_k': stochastic_k,
+                'stochastic_d': stochastic_d,
+                'cci': cci,
+                'rsi_condition': 30 < weekly_rsi < 70,
+                'stoch_bullish': stochastic_k > stochastic_d
+            },
+            'volume_analysis': {
+                'mfi': mfi,
+                'mfi_bullish': mfi > 50
+            },
+            'levels': {
+                'pivot_points': pivot_points,
+                'swing_highs': swing_highs,
+                'swing_lows': swing_lows
+            },
+            'trend_context': trend_context,
+            'current_price': current.close
+        }
+
+    def _analyze_ema_trend(self, ema_20: float, ema_50: float, ema_200: float, current_price: float) -> str:
+        """Analyze EMA trend alignment"""
+        if current_price > ema_20 > ema_50 > ema_200:
+            return "STRONG_BULLISH"
+        elif current_price > ema_20 > ema_50:
+            return "BULLISH"
+        elif current_price < ema_20 < ema_50 < ema_200:
+            return "STRONG_BEARISH"
+        elif current_price < ema_20 < ema_50:
+            return "BEARISH"
+        else:
+            return "MIXED"
+
+    def _determine_comprehensive_trend(self, ema_20: float, ema_50: float, ema_200: float, 
+                                     macd_line: float, macd_signal: float, 
+                                     tenkan: float, kijun: float, current_price: float) -> str:
+        """Determine comprehensive trend using multiple indicators"""
+        bullish_signals = 0
+        bearish_signals = 0
+        
+        # EMA trend signals
+        if current_price > ema_20 > ema_50 > ema_200:
+            bullish_signals += 2
+        elif current_price < ema_20 < ema_50 < ema_200:
+            bearish_signals += 2
+        
+        # MACD signals
+        if macd_line > macd_signal:
+            bullish_signals += 1
+        else:
+            bearish_signals += 1
+        
+        # Ichimoku signals
+        if tenkan > kijun:
+            bullish_signals += 1
+        else:
+            bearish_signals += 1
+        
+        # Determine overall trend
+        if bullish_signals >= 3:
+            return "BULLISH_TREND"
+        elif bearish_signals >= 3:
+            return "BEARISH_TREND"
+        else:
+            return "SIDEWAYS"

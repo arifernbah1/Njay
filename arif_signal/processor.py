@@ -223,7 +223,11 @@ class SignalProcessor:
             self.logger.log_filter_result(pair, "Volume", True, "Volume {} >= {} threshold".format(current.volume, mode_config['volume_threshold']))
             
             # Pattern detection with mode-specific sensitivity
-            sweep_detected, sweep_direction = self.detector.detect_sweep(candles, pair)
+            if mode == "SCALPING":
+                sweep_detected, sweep_direction = self.detector.detect_sweep(candles, pair, "SCALPING")
+            else:  # SWING mode
+                sweep_detected, sweep_direction = self.detector.detect_sweep(candles, pair, "SWING")
+            
             if sweep_detected:
                 self.logger.log_pattern_detection(pair, "Sweep", True, {"Direction": sweep_direction, "Mode": mode})
                 
@@ -264,86 +268,79 @@ class SignalProcessor:
                         "Mode": mode
                     })
             
-            # Check for engulfing patterns
-            if sweep_direction == SignalType.BULLISH and self.detector.detect_engulfing(candles, SignalType.BULLISH):
-                self.logger.log_pattern_detection(pair, "Bullish Engulfing", True, {"Mode": mode})
-                
-                # Calculate strength and risk/reward
-                strength = self.calculate_strength(candles, pair, mode)
-                rr_ratio, stop_loss, take_profit = self.calculate_risk_reward(entry_price, SignalType.BULLISH, candles, mode)
-                
-                # Mode-specific strength filter
-                if strength >= mode_config['min_strength'] and rr_ratio >= mode_config['min_risk_reward']:
-                    # Create signal
-                    signal = SignalData(
-                        pair=pair,
-                        direction=SignalType.BUY,
-                        entry_price=entry_price,
-                        stop_loss=stop_loss,
-                        take_profit=take_profit,
-                        strength=strength,
-                        risk_reward=rr_ratio,
-                        timestamp=datetime.utcnow()
-                    )
+            # Check for engulfing patterns (only for scalping mode)
+            if mode == "SCALPING":
+                if sweep_direction == SignalType.BULLISH and self.detector.detect_engulfing(candles, SignalType.BULLISH):
+                    self.logger.log_pattern_detection(pair, "Bullish Engulfing", True, {"Mode": mode})
                     
-                    # Update tracking
-                    if mode == "SCALPING":
+                    # Calculate strength and risk/reward
+                    strength = self.calculate_strength(candles, pair, mode)
+                    rr_ratio, stop_loss, take_profit = self.calculate_risk_reward(entry_price, SignalType.BULLISH, candles, mode)
+                    
+                    # Mode-specific strength filter
+                    if strength >= mode_config['min_strength'] and rr_ratio >= mode_config['min_risk_reward']:
+                        # Create signal
+                        signal = SignalData(
+                            pair=pair,
+                            direction=SignalType.BUY,
+                            entry_price=entry_price,
+                            stop_loss=stop_loss,
+                            take_profit=take_profit,
+                            strength=strength,
+                            risk_reward=rr_ratio,
+                            timestamp=datetime.utcnow()
+                        )
+                        
+                        # Update tracking
                         self.daily_signal_count_scalping["{}_{}".format(pair, today)] += 1
                         self.last_signals_scalping[pair] = datetime.utcnow()
+                        
+                        self.logger.log_signal_generated(signal.__dict__)
+                        return signal
                     else:
-                        self.daily_signal_count_swing["{}_{}".format(pair, today)] += 1
-                        self.last_signals_swing[pair] = datetime.utcnow()
-                    
-                    self.logger.log_signal_generated(signal.__dict__)
-                    return signal
-                else:
-                    self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                        "Strength": strength,
-                        "Required Strength": mode_config['min_strength'],
-                        "R:R": rr_ratio,
-                        "Required R:R": mode_config['min_risk_reward'],
-                        "Mode": mode
-                    })
-            
-            elif sweep_direction == SignalType.BEARISH and self.detector.detect_engulfing(candles, SignalType.BEARISH):
-                self.logger.log_pattern_detection(pair, "Bearish Engulfing", True, {"Mode": mode})
+                        self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
+                            "Strength": strength,
+                            "Required Strength": mode_config['min_strength'],
+                            "R:R": rr_ratio,
+                            "Required R:R": mode_config['min_risk_reward'],
+                            "Mode": mode
+                        })
                 
-                # Calculate strength and risk/reward
-                strength = self.calculate_strength(candles, pair, mode)
-                rr_ratio, stop_loss, take_profit = self.calculate_risk_reward(entry_price, SignalType.BEARISH, candles, mode)
-                
-                # Mode-specific strength filter
-                if strength >= mode_config['min_strength'] and rr_ratio >= mode_config['min_risk_reward']:
-                    # Create signal
-                    signal = SignalData(
-                        pair=pair,
-                        direction=SignalType.SELL,
-                        entry_price=entry_price,
-                        stop_loss=stop_loss,
-                        take_profit=take_profit,
-                        strength=strength,
-                        risk_reward=rr_ratio,
-                        timestamp=datetime.utcnow()
-                    )
+                elif sweep_direction == SignalType.BEARISH and self.detector.detect_engulfing(candles, SignalType.BEARISH):
+                    self.logger.log_pattern_detection(pair, "Bearish Engulfing", True, {"Mode": mode})
                     
-                    # Update tracking
-                    if mode == "SCALPING":
+                    # Calculate strength and risk/reward
+                    strength = self.calculate_strength(candles, pair, mode)
+                    rr_ratio, stop_loss, take_profit = self.calculate_risk_reward(entry_price, SignalType.BEARISH, candles, mode)
+                    
+                    # Mode-specific strength filter
+                    if strength >= mode_config['min_strength'] and rr_ratio >= mode_config['min_risk_reward']:
+                        # Create signal
+                        signal = SignalData(
+                            pair=pair,
+                            direction=SignalType.SELL,
+                            entry_price=entry_price,
+                            stop_loss=stop_loss,
+                            take_profit=take_profit,
+                            strength=strength,
+                            risk_reward=rr_ratio,
+                            timestamp=datetime.utcnow()
+                        )
+                        
+                        # Update tracking
                         self.daily_signal_count_scalping["{}_{}".format(pair, today)] += 1
                         self.last_signals_scalping[pair] = datetime.utcnow()
+                        
+                        self.logger.log_signal_generated(signal.__dict__)
+                        return signal
                     else:
-                        self.daily_signal_count_swing["{}_{}".format(pair, today)] += 1
-                        self.last_signals_swing[pair] = datetime.utcnow()
-                    
-                    self.logger.log_signal_generated(signal.__dict__)
-                    return signal
-                else:
-                    self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
-                        "Strength": strength,
-                        "Required Strength": mode_config['min_strength'],
-                        "R:R": rr_ratio,
-                        "Required R:R": mode_config['min_risk_reward'],
-                        "Mode": mode
-                    })
+                        self.logger.log_signal_filtered(pair, "Strength/R:R insufficient for {}".format(mode), {
+                            "Strength": strength,
+                            "Required Strength": mode_config['min_strength'],
+                            "R:R": rr_ratio,
+                            "Required R:R": mode_config['min_risk_reward'],
+                            "Mode": mode
+                        })
             
             # Swing Trading OTL Pattern Detection (for SWING mode only)
             if mode == "SWING":
