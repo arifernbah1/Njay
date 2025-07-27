@@ -1,238 +1,352 @@
 # trading_logger.py
 
 import logging
-import sys
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+import os
 import json
-from pathlib import Path
-try:
-    import colorama # Import colorama for potential color support
-except ImportError:
-    colorama = None # Fallback if colorama is not available
+from datetime import datetime
+from typing import Dict, Any, Optional
+from dataclasses import dataclass, asdict
 
-# Initialize colorama if available
-if colorama:
-    colorama.init()
+@dataclass
+class TradingSignal:
+    """Trading signal data structure"""
+    pair: str
+    direction: str  # BUY/SELL
+    entry_price: float
+    stop_loss: float
+    take_profit: float
+    strength: float
+    risk_reward: float
+    mode: str  # SCALPING/SWING
+    timestamp: datetime
+    pattern: str  # Sweep/Engulfing/OTL
+    volume_ratio: float
+    rsi: float
+    trend: str
 
-# Custom Formatter for basic coloring
-class ColoredFormatter(logging.Formatter):
-    COLORS = {
-        'WARNING': colorama.Fore.YELLOW if colorama else '',
-        'ERROR': colorama.Fore.RED if colorama else '',
-        'CRITICAL': (colorama.Fore.RED + colorama.Style.BRIGHT) if colorama else '',
-        'INFO': colorama.Fore.GREEN if colorama else '',
-        'DEBUG': colorama.Fore.BLUE if colorama else '',
-        'RESET': colorama.Style.RESET_ALL if colorama else ''
-    }
+@dataclass
+class TradingPerformance:
+    """Trading performance metrics"""
+    mode: str
+    total_signals: int
+    winning_signals: int
+    losing_signals: int
+    win_rate: float
+    avg_risk_reward: float
+    total_pnl: float
+    max_drawdown: float
+    sharpe_ratio: float
+    profit_factor: float
 
-    def format(self, record):
-        log_level = record.levelname
-        color = self.COLORS.get(log_level, self.COLORS['RESET'])
-        # Use a consistent base formatter for structure
-        base_formatter = logging.Formatter('%(asctime)s | %(levelname)8s | %(name)15s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        formatted_message = base_formatter.format(record)
-        return "{}{}{}".format(color, formatted_message, self.COLORS['RESET'])
-
-
-# ========== ENHANCED LOGGER SETUP ==========
 class TradingLogger:
-    """Enhanced logger for trading bot with detailed process tracking"""
-
-    def __init__(self, log_level: str = "INFO"):
-        self.setup_logger(log_level)
-        self.session_stats = {
-            'signals_generated': 0,
-            'signals_filtered': 0,
-            'patterns_detected': 0,
-            'websocket_messages': 0,
-            'errors': 0
-        }
-
-    def setup_logger(self, log_level: str):
-        """Setup enhanced logger with file and console output"""
-
-        # Remove existing handlers to prevent duplicates if run multiple times
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
-
-        # Create logs directory
-        Path("logs").mkdir(exist_ok=True)
-
-        # Create handlers
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, log_level.upper()))
-        console_handler.setFormatter(ColoredFormatter()) # Use the custom colored formatter
-
-        file_handler_daily = logging.FileHandler(
-            "logs/trading_bot_{}.log".format(datetime.now().strftime('%Y%m%d')),
-            encoding='utf-8'
+    """Specialized trading logger with trading-specific features"""
+    
+    def __init__(self, log_dir: str = "trading_logs"):
+        self.log_dir = log_dir
+        self.setup_trading_logging()
+        self.performance_tracker = {}
+    
+    def setup_trading_logging(self):
+        """Setup specialized trading logging structure"""
+        # Create trading-specific directories
+        trading_dirs = [
+            'signals', 'patterns', 'performance', 'risk_management',
+            'market_analysis', 'alerts', 'backtest', 'live_trading'
+        ]
+        
+        for subdir in trading_dirs:
+            os.makedirs(os.path.join(self.log_dir, subdir), exist_ok=True)
+        
+        # Setup specialized loggers
+        self.setup_signal_logger()
+        self.setup_pattern_logger()
+        self.setup_performance_logger()
+        self.setup_risk_logger()
+        self.setup_market_logger()
+        self.setup_alert_logger()
+    
+    def setup_signal_logger(self):
+        """Setup signal-specific logger"""
+        self.signal_logger = logging.getLogger('trading_signals')
+        self.signal_logger.setLevel(logging.INFO)
+        
+        # Signal file handler
+        signal_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'signals', f'signals_{datetime.now().strftime("%Y%m%d")}.json')
         )
-        file_handler_daily.setLevel(getattr(logging, log_level.upper()))
-        # Use basic formatter for file logs (no colors)
-        file_handler_daily.setFormatter(logging.Formatter('%(asctime)s | %(levelname)8s | %(name)15s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
-
-
-        file_handler_signals = logging.FileHandler(
-            "logs/signals_{}.log".format(datetime.now().strftime('%Y%m%d')),
-            encoding='utf-8'
+        signal_handler.setLevel(logging.INFO)
+        
+        # Custom formatter for JSON
+        formatter = logging.Formatter('%(message)s')
+        signal_handler.setFormatter(formatter)
+        
+        self.signal_logger.addHandler(signal_handler)
+        self.signal_logger.propagate = False
+    
+    def setup_pattern_logger(self):
+        """Setup pattern-specific logger"""
+        self.pattern_logger = logging.getLogger('trading_patterns')
+        self.pattern_logger.setLevel(logging.INFO)
+        
+        pattern_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'patterns', f'patterns_{datetime.now().strftime("%Y%m%d")}.json')
         )
-        file_handler_signals.setLevel(logging.INFO) # Signals usually INFO level
-         # Use basic formatter for file logs (no colors)
-        file_handler_signals.setFormatter(logging.Formatter('%(asctime)s | %(levelname)8s | %(name)15s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+        pattern_handler.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter('%(message)s')
+        pattern_handler.setFormatter(formatter)
+        
+        self.pattern_logger.addHandler(pattern_handler)
+        self.pattern_logger.propagate = False
+    
+    def setup_performance_logger(self):
+        """Setup performance-specific logger"""
+        self.performance_logger = logging.getLogger('trading_performance')
+        self.performance_logger.setLevel(logging.INFO)
+        
+        perf_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'performance', f'performance_{datetime.now().strftime("%Y%m%d")}.json')
+        )
+        perf_handler.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter('%(message)s')
+        perf_handler.setFormatter(formatter)
+        
+        self.performance_logger.addHandler(perf_handler)
+        self.performance_logger.propagate = False
+    
+    def setup_risk_logger(self):
+        """Setup risk management logger"""
+        self.risk_logger = logging.getLogger('trading_risk')
+        self.risk_logger.setLevel(logging.INFO)
+        
+        risk_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'risk_management', f'risk_{datetime.now().strftime("%Y%m%d")}.json')
+        )
+        risk_handler.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter('%(message)s')
+        risk_handler.setFormatter(formatter)
+        
+        self.risk_logger.addHandler(risk_handler)
+        self.risk_logger.propagate = False
+    
+    def setup_market_logger(self):
+        """Setup market analysis logger"""
+        self.market_logger = logging.getLogger('trading_market')
+        self.market_logger.setLevel(logging.INFO)
+        
+        market_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'market_analysis', f'market_{datetime.now().strftime("%Y%m%d")}.json')
+        )
+        market_handler.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter('%(message)s')
+        market_handler.setFormatter(formatter)
+        
+        self.market_logger.addHandler(market_handler)
+        self.market_logger.propagate = False
+    
+    def setup_alert_logger(self):
+        """Setup trading alerts logger"""
+        self.alert_logger = logging.getLogger('trading_alerts')
+        self.alert_logger.setLevel(logging.INFO)
+        
+        alert_handler = logging.FileHandler(
+            os.path.join(self.log_dir, 'alerts', f'alerts_{datetime.now().strftime("%Y%m%d")}.json')
+        )
+        alert_handler.setLevel(logging.INFO)
+        
+        formatter = logging.Formatter('%(message)s')
+        alert_handler.setFormatter(formatter)
+        
+        self.alert_logger.addHandler(alert_handler)
+        self.alert_logger.propagate = False
 
-
-        # Add handlers to root logger
-        logging.root.addHandler(console_handler)
-        logging.root.addHandler(file_handler_daily)
-        logging.root.addHandler(file_handler_signals)
-
-        # Set root logger level
-        logging.root.setLevel(getattr(logging, log_level.upper()))
-
-
-        # Create specialized loggers
-        self.main_logger = logging.getLogger("MAIN")
-        self.data_logger = logging.getLogger("DATA")
-        self.signal_logger = logging.getLogger("SIGNAL")
-        self.websocket_logger = logging.getLogger("WEBSOCKET")
-        self.pattern_logger = logging.getLogger("PATTERN")
-        self.telegram_logger = logging.getLogger("TELEGRAM")
-
-
-    def log_bot_start(self, pairs: List[str], timeframe: str):
-        self.main_logger.info("=" * 80)
-        self.main_logger.info("🚀 ENHANCED TRADING BOT - STARTING")
-        self.main_logger.info("=" * 80)
-        self.main_logger.info("📅 Start Time: {}".format(datetime.now().strftime('%Y-%m-%d %H:%M:%S WIB')))
-        self.main_logger.info("⏰ Timeframe: {}".format(timeframe))
-        self.main_logger.info("💎 Pairs: {}".format(', '.join(pairs)))
-        self.main_logger.info("🕐 Session: {}".format(self.get_trading_session()))
-        self.main_logger.info("-" * 80)
-
-    def log_data_initialization(self, pair: str, candles_loaded: int):
-        self.data_logger.info("📊 {}: Loading historical data...".format(pair))
-        self.data_logger.info("✅ {}: {} candles loaded successfully".format(pair, candles_loaded))
-
-    def log_websocket_connection(self, status: str, streams_count: int = 0):
-        if status == "CONNECTED":
-            self.websocket_logger.info("🔗 WebSocket connected successfully")
-            if streams_count > 0:
-                self.websocket_logger.info("📡 Subscribed to {} data streams".format(streams_count))
-        elif status == "DISCONNECTED":
-            self.websocket_logger.warning("❌ WebSocket disconnected")
-        elif status == "RECONNECTING":
-            self.websocket_logger.info("🔄 Attempting to reconnect WebSocket...")
-        elif status == "ERROR":
-            self.websocket_logger.error("💥 WebSocket connection error")
-
-    def log_candle_received(self, pair: str, candle_data: dict):
-        self.websocket_logger.debug(
-            "📈 {}: New candle - "
-            "O:{:.4f} H:{:.4f} "
-            "L:{:.4f} C:{:.4f} "
-            "V:{:.0f}".format(
-                pair,
-                float(candle_data.get('o', 0)),
-                float(candle_data.get('h', 0)),
-                float(candle_data.get('l', 0)),
-                float(candle_data.get('c', 0)),
-                float(candle_data.get('v', 0))
+    # Trading-Specific Logging Methods
+    def log_trading_signal(self, signal: TradingSignal):
+        """Log trading signal with rich context"""
+        try:
+            signal_data = {
+                'timestamp': signal.timestamp.isoformat(),
+                'pair': signal.pair,
+                'mode': signal.mode,
+                'direction': signal.direction,
+                'entry_price': signal.entry_price,
+                'stop_loss': signal.stop_loss,
+                'take_profit': signal.take_profit,
+                'strength': signal.strength,
+                'risk_reward': signal.risk_reward,
+                'pattern': signal.pattern,
+                'volume_ratio': signal.volume_ratio,
+                'rsi': signal.rsi,
+                'trend': signal.trend,
+                'potential_profit': (signal.take_profit - signal.entry_price) if signal.direction == "BUY" else (signal.entry_price - signal.take_profit),
+                'potential_loss': abs(signal.entry_price - signal.stop_loss)
+            }
+            
+            self.signal_logger.info(json.dumps(signal_data))
+            
+            # Update performance tracker
+            self._update_performance_tracker(signal)
+            
+        except Exception as e:
+            print(f"Error logging trading signal: {str(e)}")
+    
+    def log_pattern_detection(self, pair: str, pattern: str, detected: bool, 
+                            details: Dict, mode: str, confidence: float = 0.0):
+        """Log pattern detection with trading context"""
+        try:
+            pattern_data = {
+                'timestamp': datetime.now().isoformat(),
+                'pair': pair,
+                'pattern': pattern,
+                'detected': detected,
+                'mode': mode,
+                'confidence': confidence,
+                'details': details,
+                'market_conditions': self._get_market_conditions(pair)
+            }
+            
+            self.pattern_logger.info(json.dumps(pattern_data))
+            
+        except Exception as e:
+            print(f"Error logging pattern detection: {str(e)}")
+    
+    def log_risk_management(self, pair: str, action: str, details: Dict, mode: str):
+        """Log risk management actions"""
+        try:
+            risk_data = {
+                'timestamp': datetime.now().isoformat(),
+                'pair': pair,
+                'action': action,  # ENTRY/EXIT/STOP_LOSS/TAKE_PROFIT
+                'mode': mode,
+                'details': details,
+                'risk_level': self._calculate_risk_level(details)
+            }
+            
+            self.risk_logger.info(json.dumps(risk_data))
+            
+        except Exception as e:
+            print(f"Error logging risk management: {str(e)}")
+    
+    def log_market_analysis(self, pair: str, analysis: Dict, mode: str):
+        """Log market analysis with trading context"""
+        try:
+            market_data = {
+                'timestamp': datetime.now().isoformat(),
+                'pair': pair,
+                'mode': mode,
+                'analysis': analysis,
+                'market_sentiment': self._determine_sentiment(analysis),
+                'volatility': self._calculate_volatility(analysis),
+                'trend_strength': self._calculate_trend_strength(analysis)
+            }
+            
+            self.market_logger.info(json.dumps(market_data))
+            
+        except Exception as e:
+            print(f"Error logging market analysis: {str(e)}")
+    
+    def log_trading_alert(self, alert_type: str, message: str, pair: str = None, 
+                         mode: str = None, priority: str = "MEDIUM"):
+        """Log trading alerts"""
+        try:
+            alert_data = {
+                'timestamp': datetime.now().isoformat(),
+                'alert_type': alert_type,  # SIGNAL/STOP_LOSS/TAKE_PROFIT/ERROR/WARNING
+                'message': message,
+                'pair': pair,
+                'mode': mode,
+                'priority': priority,
+                'requires_action': priority in ["HIGH", "CRITICAL"]
+            }
+            
+            self.alert_logger.info(json.dumps(alert_data))
+            
+        except Exception as e:
+            print(f"Error logging trading alert: {str(e)}")
+    
+    def log_performance_summary(self, mode: str, timeframe: str = "DAILY"):
+        """Log performance summary with trading metrics"""
+        try:
+            if mode not in self.performance_tracker:
+                return
+            
+            stats = self.performance_tracker[mode]
+            performance = TradingPerformance(
+                mode=mode,
+                total_signals=stats.get('total_signals', 0),
+                winning_signals=stats.get('winning_signals', 0),
+                losing_signals=stats.get('losing_signals', 0),
+                win_rate=stats.get('win_rate', 0.0),
+                avg_risk_reward=stats.get('avg_risk_reward', 0.0),
+                total_pnl=stats.get('total_pnl', 0.0),
+                max_drawdown=stats.get('max_drawdown', 0.0),
+                sharpe_ratio=stats.get('sharpe_ratio', 0.0),
+                profit_factor=stats.get('profit_factor', 0.0)
             )
-        )
-        self.session_stats['websocket_messages'] += 1
-
-    def log_signal_analysis_start(self, pair: str, entry_price: float):
-        self.signal_logger.info("🔍 {}: Starting signal analysis at $ {:.4f}".format(pair, entry_price))
-
-    def log_filter_result(self, pair: str, filter_name: str, result: bool, details: str = ""):
-        status = "✅ PASS" if result else "❌ FAIL"
-        detail_msg = " ({})".format(details) if details else ""
-        self.signal_logger.debug("   🧪 {}: {} - {}{}".format(pair, filter_name, status, detail_msg))
-
-    def log_pattern_detection(self, pair: str, pattern_type: str, detected: bool, details: dict = None):
-        if detected:
-            self.pattern_logger.info("🎯 {}: {} pattern DETECTED!".format(pair, pattern_type))
-            if details:
-                for key, value in details.items():
-                    self.pattern_logger.info("   📊 {}: {}".format(key, value))
-            self.session_stats['patterns_detected'] += 1
-        else:
-            self.pattern_logger.debug("   🔍 {}: {} pattern not found".format(pair, pattern_type))
-
-    def log_technical_analysis(self, pair: str, indicators: dict):
-        self.signal_logger.info("📊 {}: Technical Analysis:".format(pair))
-        for indicator, value in indicators.items():
-            if isinstance(value, float):
-                self.signal_logger.info("   📈 {}: {:.2f}".format(indicator, value))
-            else:
-                self.signal_logger.info("   📈 {}: {}".format(indicator, value))
-
-
-    def log_signal_generated(self, signal_data: dict):
-        pair = signal_data.get('pair', 'N/A')
-        direction = signal_data.get('direction', 'N/A')
-        strength = signal_data.get('strength', 'N/A')
-        rr_ratio = signal_data.get('risk_reward', 'N/A')
-
-        self.signal_logger.info("🚀" + "=" * 60)
-        self.signal_logger.info("🎯 SIGNAL GENERATED: {} {}".format(pair, direction))
-        self.signal_logger.info("   💪 Strength: {:.1f}★".format(strength) if isinstance(strength, float) else "   💪 Strength: {}".format(strength))
-        self.signal_logger.info("   💰 Entry: $ {:.4f}".format(signal_data.get('entry_price')) if isinstance(signal_data.get('entry_price'), float) else "   💰 Entry: {}".format(signal_data.get('entry_price', 'N/A')))
-        self.signal_logger.info("   🛑 Stop Loss: $ {:.4f}".format(signal_data.get('stop_loss')) if isinstance(signal_data.get('stop_loss'), float) else "   🛑 Stop Loss: {}".format(signal_data.get('stop_loss', 'N/A')))
-        self.signal_logger.info("   🎯 Take Profit: $ {:.4f}".format(signal_data.get('take_profit')) if isinstance(signal_data.get('take_profit'), float) else "   🎯 Take Profit: {}".format(signal_data.get('take_profit', 'N/A')))
-        self.signal_logger.info("   📊 Risk:Reward: 1:{:.1f}".format(rr_ratio) if isinstance(rr_ratio, float) else "   📊 Risk:Reward: 1:{}".format(rr_ratio))
-        self.signal_logger.info("   🕐 Time: {}".format(datetime.now().strftime('%H:%M:%S WIB')))
-        self.signal_logger.info("🚀" + "=" * 60)
-
-        self.session_stats['signals_generated'] += 1
-
-
-    def log_signal_filtered(self, pair: str, reason: str, details: dict = None):
-        self.signal_logger.info("🚫 {}: Signal FILTERED - {}".format(pair, reason))
-        if details:
-            for key, value in details.items():
-                self.signal_logger.info("   📊 {}: {}".format(key, value))
-
-        self.session_stats['signals_filtered'] += 1
-
-
-    def log_telegram_notification(self, success: bool, pair: str, attempt: int = 1):
-        if success:
-            self.telegram_logger.info("📱 {}: Telegram notification sent successfully".format(pair))
-        else:
-            self.telegram_logger.warning("⚠️ {}: Telegram notification failed (attempt {})".format(pair, attempt))
-
-    def log_error(self, component: str, error_msg: str, pair: str = ""):
-        pair_info = "{}: ".format(pair) if pair else ""
-        # Use the root logger for general errors
-        logging.error("💥 {} ERROR - {}{}".format(component, pair_info, error_msg))
-        self.session_stats['errors'] += 1
-
-    def log_session_stats(self):
-        uptime = datetime.now() - datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        self.main_logger.info("📊" + "=" * 50)
-        self.main_logger.info("📊 SESSION STATISTICS")
-        self.main_logger.info("📊" + "=" * 50)
-        self.main_logger.info("⏱️  Uptime: {}".format(uptime))
-        self.main_logger.info("🚀 Signals Generated: {}".format(self.session_stats['signals_generated']))
-        self.main_logger.info("🚫 Signals Filtered: {}".format(self.session_stats['signals_filtered']))
-        self.main_logger.info("🎯 Patterns Detected: {}".format(self.session_stats['patterns_detected']))
-        self.main_logger.info("📡 WebSocket Messages: {}".format(self.session_stats['websocket_messages']))
-        self.main_logger.info("💥 Errors: {}".format(self.session_stats['errors']))
-
-        total_analysis = self.session_stats['signals_generated'] + self.session_stats['signals_filtered']
-        if total_analysis > 0:
-            efficiency = (self.session_stats['signals_generated'] / total_analysis) * 100
-            self.main_logger.info("📈 Signal Efficiency: {:.1f}%".format(efficiency))
-
-        self.main_logger.info("📊" + "=" * 50)
-
-    def get_trading_session(self) -> str:
-        """Get current trading session"""
-        hour = datetime.now().hour
-        if 8 <= hour <= 12: return "PAGI (Asian+EU Prep)"
-        elif 15 <= hour <= 19: return "SORE (London Active)"
-        elif 20 <= hour <= 23: return "MALAM (NY Prime)"
-        else: return "DINI HARI (Low Volume)"
+            
+            self.performance_logger.info(json.dumps(asdict(performance)))
+            
+        except Exception as e:
+            print(f"Error logging performance summary: {str(e)}")
+    
+    # Helper methods
+    def _update_performance_tracker(self, signal: TradingSignal):
+        """Update performance tracking"""
+        mode = signal.mode
+        if mode not in self.performance_tracker:
+            self.performance_tracker[mode] = {
+                'total_signals': 0,
+                'winning_signals': 0,
+                'losing_signals': 0,
+                'total_pnl': 0.0,
+                'risk_rewards': []
+            }
+        
+        self.performance_tracker[mode]['total_signals'] += 1
+        self.performance_tracker[mode]['risk_rewards'].append(signal.risk_reward)
+        
+        # Calculate win rate (simplified)
+        if signal.risk_reward > 1.0:
+            self.performance_tracker[mode]['winning_signals'] += 1
+        
+        # Calculate average risk/reward
+        self.performance_tracker[mode]['avg_risk_reward'] = sum(
+            self.performance_tracker[mode]['risk_rewards']
+        ) / len(self.performance_tracker[mode]['risk_rewards'])
+        
+        # Calculate win rate
+        total = self.performance_tracker[mode]['total_signals']
+        wins = self.performance_tracker[mode]['winning_signals']
+        self.performance_tracker[mode]['win_rate'] = wins / total if total > 0 else 0.0
+    
+    def _get_market_conditions(self, pair: str) -> Dict:
+        """Get current market conditions (placeholder)"""
+        return {
+            'volatility': 'MEDIUM',
+            'trend': 'SIDEWAYS',
+            'volume': 'NORMAL',
+            'spread': 'TIGHT'
+        }
+    
+    def _calculate_risk_level(self, details: Dict) -> str:
+        """Calculate risk level based on details"""
+        # Placeholder implementation
+        return "MEDIUM"
+    
+    def _determine_sentiment(self, analysis: Dict) -> str:
+        """Determine market sentiment"""
+        # Placeholder implementation
+        return "NEUTRAL"
+    
+    def _calculate_volatility(self, analysis: Dict) -> float:
+        """Calculate volatility"""
+        # Placeholder implementation
+        return 0.5
+    
+    def _calculate_trend_strength(self, analysis: Dict) -> float:
+        """Calculate trend strength"""
+        # Placeholder implementation
+        return 0.7
