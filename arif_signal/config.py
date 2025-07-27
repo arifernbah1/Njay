@@ -59,6 +59,7 @@ class ConfigManager:
             'signal_cooldown': 5,
             'pattern_sensitivity': 0.8,
             'volume_threshold': 100000,
+            'session_restricted': True,  # Scalping has session restrictions
             'telegram_chat_id': os.getenv('SCALPING_CHAT_ID', TELEGRAM_CHAT_ID)  # Separate chat for scalping
         },
         TradingMode.SWING: {
@@ -73,6 +74,7 @@ class ConfigManager:
             'signal_cooldown': 30,
             'pattern_sensitivity': 0.6,
             'volume_threshold': 500000,
+            'session_restricted': False,  # Swing trading runs 24/7
             'telegram_chat_id': os.getenv('SWING_CHAT_ID', TELEGRAM_CHAT_ID)  # Separate chat for swing
         }
     }
@@ -141,6 +143,7 @@ class ConfigManager:
         print("   🔥 DUAL MODE ENABLED:")
         for mode, config in cls.DUAL_MODE_CONFIG.items():
             status = "✅" if config['enabled'] else "❌"
-            print("      {} {} Mode: {}m TF, {} signals/day, {}min cooldown".format(
-                status, mode, config['timeframe'], config['max_daily_signals'], config['signal_cooldown']
+            session_info = "Session-restricted" if config['session_restricted'] else "24/7 trading"
+            print("      {} {} Mode: {}m TF, {} signals/day, {}min cooldown, {}".format(
+                status, mode, config['timeframe'], config['max_daily_signals'], config['signal_cooldown'], session_info
             ))

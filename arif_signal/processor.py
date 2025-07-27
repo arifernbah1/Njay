@@ -149,19 +149,23 @@ class SignalProcessor:
             self.logger.log_signal_analysis_start(pair, entry_price)
             
             # Mode-specific time filter
-            if mode == "SWING" and not TimeUtils.is_good_trading_time():
+            if mode == "SCALPING" and not TimeUtils.is_good_trading_time():
                 session = TimeUtils.get_trading_session()
                 self.logger.log_filter_result(
-                    pair, "Time Filter", False, "Bad session for Swing: {}".format(session)
+                    pair, "Time Filter", False, "Bad session for Scalping: {}".format(session)
                 )
-                self.logger.log_signal_filtered(pair, "Outside good trading hours for Swing", {
+                self.logger.log_signal_filtered(pair, "Outside good trading hours for Scalping", {
                     "Session": session,
                     "Current Time": TimeUtils.get_wib_time_string(),
                     "Mode": mode
                 })
                 return None
             
-            self.logger.log_filter_result(pair, "Time Filter", True, "Good trading session for {}".format(mode))
+            # Swing mode doesn't have session restrictions - it runs 24/7
+            if mode == "SCALPING":
+                self.logger.log_filter_result(pair, "Time Filter", True, "Good trading session for {}".format(mode))
+            else:
+                self.logger.log_filter_result(pair, "Time Filter", True, "Swing mode - no session restrictions")
             
             # Mode-specific daily limit check
             today = datetime.utcnow().date()
